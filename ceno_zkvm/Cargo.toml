@@ -47,6 +47,7 @@ thread_local = "1.1"
 cfg-if.workspace = true
 criterion.workspace = true
 pprof.workspace = true
+tracing-profile = { git = "https://gitlab.com/IrreducibleOSS/tracing-profile.git", rev = "6d986ca1a1b0129b6496205836522e457e75c45b", features = ["perfetto"] }
 
 [build-dependencies]
 glob = "0.3"

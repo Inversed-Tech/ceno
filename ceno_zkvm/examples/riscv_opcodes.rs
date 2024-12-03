@@ -1,4 +1,5 @@
 use std::{panic, time::Instant};
+use tracing_profile::{PerfettoBackend, PerfettoLayer, PerfettoSettings};
 
 use ceno_zkvm::{
     declare_program,
@@ -105,7 +106,10 @@ fn main() {
     // Example: RUST_LOG="[sumcheck]" cargo run.. to get only events under the "sumcheck" span
     let filter = EnvFilter::from_default_env();
 
-    let subscriber = Registry::default().with(fmt_layer).with(filter);
+    let subscriber = Registry::default()
+        .with(fmt_layer)
+        .with(filter)
+        .with(PerfettoLayer::new_from_env());
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let top_level = entered_span!("TOPLEVEL");
