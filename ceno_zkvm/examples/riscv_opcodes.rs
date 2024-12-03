@@ -1,5 +1,5 @@
 use std::{panic, time::Instant};
-use tracing_profile::{PerfettoBackend, PerfettoLayer, PerfettoSettings};
+use tracing_profile::PerfettoLayer;
 
 use ceno_zkvm::{
     declare_program,
@@ -26,7 +26,9 @@ use goldilocks::{Goldilocks, GoldilocksExt2};
 use itertools::Itertools;
 use mpcs::{Basefold, BasefoldRSParams, PolynomialCommitmentScheme};
 use sumcheck::macros::{entered_span, exit_span};
-use tracing_subscriber::{EnvFilter, Registry, fmt, fmt::format::FmtSpan, layer::SubscriberExt};
+use tracing_subscriber::{
+    EnvFilter, Registry, filter::LevelFilter, fmt, fmt::format::FmtSpan, layer::SubscriberExt,
+};
 use transcript::Transcript;
 const PROGRAM_SIZE: usize = 16;
 // For now, we assume registers
@@ -104,12 +106,14 @@ fn main() {
     // Directive syntax: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
     // Example: RUST_LOG="info" cargo run.. to get spans/events at info level; profiling spans are info
     // Example: RUST_LOG="[sumcheck]" cargo run.. to get only events under the "sumcheck" span
-    let filter = EnvFilter::from_default_env();
-
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())
+        .from_env_lossy();
+    let (perfetto_layer, _perfetto_guard) = PerfettoLayer::new_from_env().unwrap();
     let subscriber = Registry::default()
+        .with(env_filter)
         .with(fmt_layer)
-        .with(filter)
-        .with(PerfettoLayer::new_from_env());
+        .with(perfetto_layer);
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let top_level = entered_span!("TOPLEVEL");

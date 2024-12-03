@@ -92,10 +92,11 @@ impl<'a, E: ExtensionField> IOPProverStateV2<'a, E> {
                 );
                 let tx_prover_state = tx_prover_state.clone();
                 let mut thread_based_transcript = thread_based_transcript.clone();
-                let current_span = tracing::Span::current();
+
                 // NOTE: Apply the span.in_scope(||) pattern to record work of spawned thread inside
                 // span of parent thread.
                 s.spawn(move |_| {
+                    let current_span = tracing::Span::current();
                     current_span.in_scope(|| {
                         let mut challenge = None;
                         let span = entered_span!("prove_rounds");
