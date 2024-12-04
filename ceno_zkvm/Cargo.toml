@@ -63,7 +63,10 @@ riv64 = []
 harness = false
 name = "riscv_add"
 
-
 [[bench]]
 harness = false
 name = "fibonacci"
+
+[[bench]]
+harness = false
+name = "is_prime"
