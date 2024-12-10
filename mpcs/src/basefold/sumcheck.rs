@@ -22,6 +22,7 @@ pub fn sum_check_first_round_field_type<E: ExtensionField>(
     //    p_i(&bh_values, &eq)
 }
 
+#[tracing::instrument(skip_all, name = "Basefold::sum_check_first_round")]
 pub fn sum_check_first_round<E: ExtensionField>(eq: &mut [E], bh_values: &mut [E]) -> Vec<E> {
     // The input polynomials are in the form of evaluations. Instead of viewing
     // every one element as the evaluation of the polynomial at a single point,
@@ -143,6 +144,7 @@ fn parallel_pi_base<E: ExtensionField>(evals: &[E::BaseField], eq: &[E]) -> Vec<
     coeffs
 }
 
+#[tracing::instrument(skip_all, name = "Basefold::challenge_round")]
 pub fn sum_check_challenge_round<F: Field>(
     eq: &mut Vec<F>,
     bh_values: &mut Vec<F>,
@@ -162,6 +164,7 @@ pub fn sum_check_challenge_round<F: Field>(
     // p_i(&bh_values,&eq)
 }
 
+#[tracing::instrument(skip_all, name = "Basefold::sum_check_last_round")]
 pub fn sum_check_last_round<F: Field>(eq: &mut Vec<F>, bh_values: &mut Vec<F>, challenge: F) {
     one_level_eval_hc(bh_values, challenge);
     one_level_eval_hc(eq, challenge);

@@ -16,10 +16,10 @@ use crate::util::{
 use ark_std::{end_timer, start_timer};
 use ff_ext::ExtensionField;
 use itertools::Itertools;
-use serde::{Serialize, de::DeserializeOwned};
-use transcript::Transcript;
-
 use multilinear_extensions::{mle::FieldType, virtual_poly::build_eq_x_r_vec};
+use serde::{Serialize, de::DeserializeOwned};
+use tracing::debug;
+use transcript::Transcript;
 
 use crate::util::plonky2_util::reverse_index_bits_in_place;
 use rayon::prelude::{
@@ -346,6 +346,7 @@ where
 
 // outputs (trees, sumcheck_oracles, oracles, bh_evals, eq, eval)
 #[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip_all, name = "Basefold::batch_commit")]
 pub fn simple_batch_commit_phase<E: ExtensionField, Spec: BasefoldSpec<E>>(
     pp: &<Spec::EncodingScheme as EncodingScheme<E>>::ProverParameters,
     point: &[E],
@@ -396,6 +397,7 @@ where
     let mut final_message = Vec::new();
     let mut running_tree_inner = Vec::new();
     for i in 0..num_rounds {
+        let _span = debug!("Basefold round {}", i);
         let sumcheck_timer = start_timer!(|| format!("Basefold round {}", i));
         // For the first round, no need to send the running root, because this root is
         // committing to a vector that can be recovered from linearly combining other

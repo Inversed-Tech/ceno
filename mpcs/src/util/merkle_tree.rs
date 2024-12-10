@@ -253,6 +253,7 @@ where
 
 /// Merkle tree construction
 /// TODO: Support merkelizing mixed-type values
+#[tracing::instrument(skip_all, name = "merkelize")]
 fn merkelize<E: ExtensionField>(values: &[&FieldType<E>]) -> Vec<Vec<Digest<E::BaseField>>> {
     #[cfg(feature = "sanity-check")]
     for i in 0..(values.len() - 1) {
@@ -321,6 +322,7 @@ fn merkelize<E: ExtensionField>(values: &[&FieldType<E>]) -> Vec<Vec<Digest<E::B
     tree
 }
 
+#[tracing::instrument(skip_all, name = "merkelize_base")]
 fn merkelize_base<E: ExtensionField>(values: &[&[E::BaseField]]) -> Vec<Vec<Digest<E::BaseField>>> {
     #[cfg(feature = "sanity-check")]
     for i in 0..(values.len() - 1) {
@@ -366,6 +368,7 @@ fn merkelize_base<E: ExtensionField>(values: &[&[E::BaseField]]) -> Vec<Vec<Dige
     tree
 }
 
+#[tracing::instrument(skip_all, name = "merkelize_ext")]
 fn merkelize_ext<E: ExtensionField>(values: &[&[E]]) -> Vec<Vec<Digest<E::BaseField>>> {
     #[cfg(feature = "sanity-check")]
     for i in 0..(values.len() - 1) {

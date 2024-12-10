@@ -101,6 +101,7 @@ where
     }
 }
 
+#[tracing::instrument(skip_all, name = "Basefold::query_phase")]
 pub fn simple_batch_prover_query_phase<E: ExtensionField>(
     transcript: &mut Transcript<E>,
     comm: &BasefoldCommitmentWithData<E>,
@@ -1400,6 +1401,7 @@ impl<E: ExtensionField> SimpleBatchQueriesResultWithMerklePath<E>
 where
     E::BaseField: Serialize + DeserializeOwned,
 {
+    #[tracing::instrument(skip_all, name = "Basefold::from_query_result")]
     pub fn from_query_result(
         query_result: SimpleBatchQueriesResult<E>,
         oracle_trees: &[MerkleTree<E>],

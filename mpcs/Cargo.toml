@@ -30,6 +30,7 @@ rand_chacha.workspace = true
 rayon = { workspace = true, optional = true }
 serde.workspace = true
 transcript = { path = "../transcript" }
+tracing = { workspace = true }
 
 [dev-dependencies]
 criterion.workspace = true

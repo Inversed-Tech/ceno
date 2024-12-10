@@ -1071,6 +1071,7 @@ dependencies = [
  "rand_chacha",
  "rayon",
  "serde",
+ "tracing",
  "transcript",
 ]
 
