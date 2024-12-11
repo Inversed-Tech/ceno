@@ -81,6 +81,24 @@ impl<T: Sized + Sync + Clone + Send + Copy + Default> RowMajorMatrix<T> {
     pub fn par_batch_iter_mut(&mut self, num_rows: usize) -> rayon::slice::ChunksMut<T> {
         self.values.par_chunks_mut(num_rows * self.num_col)
     }
+
+    pub fn column_padded_view(&self, col_index: usize) -> Vec<T> {
+        let padding_row = match self.padding_strategy {
+            // Repeat last row if it exists
+            InstancePaddingStrategy::RepeatLast if !self.values.is_empty() => {
+                self.values[self.values.len() - self.num_col..].to_vec()
+            }
+            // Otherwise use zeroes
+            _ => vec![T::default(); self.num_col],
+        };
+        self.values
+            .iter()
+            .skip(col_index)
+            .step_by(self.num_col)
+            .chain(&mut iter::repeat(&padding_row[col_index]).take(self.num_padding_instances()))
+            .copied()
+            .collect::<Vec<_>>()
+    }
 }
 
 impl<F: Field> RowMajorMatrix<F> {
@@ -95,19 +113,9 @@ impl<F: Field> RowMajorMatrix<F> {
             // Otherwise use zeroes
             _ => vec![F::ZERO; self.num_col],
         };
-        let num_padding = self.num_padding_instances();
         (0..self.num_col)
             .into_par_iter()
-            .map(|i| {
-                self.values
-                    .iter()
-                    .skip(i)
-                    .step_by(self.num_col)
-                    .chain(&mut iter::repeat(&padding_row[i]).take(num_padding))
-                    .copied()
-                    .collect::<Vec<_>>()
-                    .into_mle()
-            })
+            .map(|i| self.column_padded_view(i).into_mle())
             .collect()
     }
 }

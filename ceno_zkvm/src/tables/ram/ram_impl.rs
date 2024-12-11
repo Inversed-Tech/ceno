@@ -416,3 +416,67 @@ impl<DVRAM: DynVolatileRamTable + Send + Sync + Clone> DynVolatileRamTableConfig
         Ok(final_table)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{array::from_fn, iter::successors};
+
+    use crate::{
+        circuit_builder::{CircuitBuilder, ConstraintSystem},
+        structs::ProgramParams,
+        tables::{
+            DynVolatileRamTable, HintsCircuit, HintsTable, MemFinalRecord, TableCircuit,
+            ram::ram_circuit::DynVolatileRamCircuit,
+        },
+        witness::LkMultiplicity,
+    };
+
+    use ceno_emul::WORD_SIZE;
+    use ff::Field;
+    use goldilocks::{Goldilocks as F, GoldilocksExt2 as E};
+    use itertools::Itertools;
+
+    #[test]
+    fn test_well_formed_address_padding() {
+        let mut cs = ConstraintSystem::<E>::new(|| "riscv");
+        let mut cb = CircuitBuilder::new(&mut cs);
+        let config = HintsCircuit::construct_circuit(&mut cb).unwrap();
+
+        let def_params = ProgramParams::default();
+        let lkm = LkMultiplicity::default().into_finalize_result();
+
+        let input = (0..23)
+            .map(|i| MemFinalRecord {
+                addr: HintsTable::addr(&def_params, i),
+                cycle: 0,
+                value: 0,
+            })
+            .collect_vec();
+        let wit =
+            HintsCircuit::<E>::assign_instances(&config, cb.cs.num_witin as usize, &lkm, &input)
+                .unwrap();
+
+        dbg!(&cb.cs.witin_namespace_map);
+        // let addr_column = cb
+        //     .cs
+        //     .witin_namespace_map
+        //     .iter()
+        //     .position(|name| name == "riscv/RAM_Memory_HintsTable/addr")
+        //     .unwrap();
+
+        let addr_column = 0;
+
+        let addr_padded_view = wit.column_padded_view(addr_column);
+        let expected = successors(Some(addr_padded_view[0]), |idx| {
+            Some(*idx + F::from(WORD_SIZE as u64))
+        })
+        .take(addr_padded_view.len())
+        .collect::<Vec<_>>();
+
+        dbg!(&addr_padded_view);
+        dbg!(&expected);
+
+        // Address column should contain increasing addresses everywhere, including padding
+        assert_eq!(addr_padded_view, expected)
+    }
+}
