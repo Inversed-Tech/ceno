@@ -496,16 +496,16 @@ mod tests {
             r
         };
 
-        let x_mle = get_mle(1);
-        let y_mle = get_mle(2);
-        let z_mle = get_mle(3);
+        let x_mle = get_mle(0);
+        let y_mle = get_mle(1);
+        let z_mle = get_mle(2);
 
         poly.add_mle_list(vec![x_mle], 1.into());
         poly.add_mle_list(vec![y_mle], 5.into());
         poly.add_mle_list(vec![z_mle], 2.into());
 
         // polynomial should now equal g(x,y,z) = x + 5y + 2z
-        // claim: H = 16
+        // claim: H = 32
 
         let H = GoldilocksExt2::from(32);
         let mut sum = GoldilocksExt2::from(0);
