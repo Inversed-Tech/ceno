@@ -474,10 +474,59 @@ pub fn build_eq_x_r_vec<E: ExtensionField>(r: &[E]) -> Vec<E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::virtual_poly::{build_eq_x_r_vec, build_eq_x_r_vec_sequential};
+    use crate::virtual_poly::{
+        ArcDenseMultilinearExtension, DenseMultilinearExtension, VirtualPolynomial,
+        build_eq_x_r_vec, build_eq_x_r_vec_sequential,
+    };
     use ark_std::rand::thread_rng;
     use ff::Field;
-    use goldilocks::GoldilocksExt2;
+    use goldilocks::{Goldilocks, GoldilocksExt2};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_simple_sumcheck() {
+        let nv = 3;
+        let mut poly: VirtualPolynomial<GoldilocksExt2> = VirtualPolynomial::new(nv);
+
+        let get_mle = |idx| {
+            let mut v: Vec<Goldilocks> = vec![0.into(); usize::pow(2, nv as u32)];
+            v[idx] = 1.into();
+            let r: ArcDenseMultilinearExtension<GoldilocksExt2> =
+                Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, v));
+            r
+        };
+
+        let x_mle = get_mle(1);
+        let y_mle = get_mle(2);
+        let z_mle = get_mle(3);
+
+        poly.add_mle_list(vec![x_mle], 1.into());
+        poly.add_mle_list(vec![y_mle], 5.into());
+        poly.add_mle_list(vec![z_mle], 2.into());
+
+        // polynomial should now equal g(x,y,z) = x + 5y + 2z
+        // claim: H = 16
+
+        let H = GoldilocksExt2::from(32);
+        let mut sum = GoldilocksExt2::from(0);
+
+        let get_coords = |(x, y, z)| {
+            let v: Vec<GoldilocksExt2> = vec![x, y, z];
+            v
+        };
+
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    let coords = get_coords((i.into(), j.into(), k.into()));
+                    let p = poly.evaluate(&coords);
+                    sum += p;
+                }
+            }
+        }
+
+        assert_eq!(H, sum);
+    }
 
     #[test]
     fn test_build_eq() {
