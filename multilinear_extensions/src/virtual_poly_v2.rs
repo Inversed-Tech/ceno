@@ -261,3 +261,56 @@ impl<'a, E: ExtensionField> VirtualPolynomialV2<'a, E> {
     //     }
     // }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mle::{ArcDenseMultilinearExtension, DenseMultilinearExtension};
+    use ff::Field;
+    use goldilocks::{ExtensionField, Goldilocks, GoldilocksExt2};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_simple_sumcheck2() {
+        type B = Goldilocks;
+        type E = GoldilocksExt2;
+        let nv = 3;
+        let mut poly: VirtualPolynomialV2<E> = VirtualPolynomialV2::new(nv);
+
+        let get_mle = |idx| {
+            let mut v: Vec<B> = vec![B::ZERO; 1 << nv];
+            v[idx] = B::ONE;
+            // not sure if this is needed. from_evaluations_vec() claims to expect the variables in little endian order.
+            // v.reverse();
+            let r: ArcDenseMultilinearExtension<GoldilocksExt2> =
+                Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, v));
+            r
+        };
+
+        let x_mle = get_mle(0);
+        let y_mle = get_mle(1);
+        let z_mle = get_mle(2);
+
+        poly.add_mle_list(vec![x_mle], 1.into());
+        poly.add_mle_list(vec![y_mle], 5.into());
+        poly.add_mle_list(vec![z_mle], 2.into());
+
+        // polynomial should now equal g(x,y,z) = x + 5y + 2z
+        // claim: H = 32
+
+        let mut sum = E::ZERO;
+
+        let pts = vec![E::ZERO, E::ONE];
+        for i in &pts {
+            for j in &pts {
+                for k in &pts {
+                    let coords: Vec<E> = vec![*i, *j, *k];
+                    let p = poly.evaluate(&coords);
+                    sum += p;
+                }
+            }
+        }
+
+        assert_eq!(sum.as_limbs()[0], 32.into());
+    }
+}
