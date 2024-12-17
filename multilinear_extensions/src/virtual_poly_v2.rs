@@ -277,9 +277,12 @@ mod tests {
         let nv = 3;
         let mut poly: VirtualPolynomialV2<E> = VirtualPolynomialV2::new(nv);
 
-        let get_mle = |idx| {
-            let mut v: Vec<B> = vec![B::ZERO; 1 << nv];
-            v[idx] = B::ONE;
+        let get_mle = |idx: u64| {
+            // let mut v: Vec<B> = vec![B::ZERO; 1 << nv];
+            // v[idx] = B::ONE;
+            let v: Vec<B> = (0_u64..1_u64 << nv)
+                .map(|i: u64| ((i >> idx) & 1).into())
+                .collect();
             // not sure if this is needed. from_evaluations_vec() claims to expect the variables in little endian order.
             // v.reverse();
             let r: ArcDenseMultilinearExtension<GoldilocksExt2> =
