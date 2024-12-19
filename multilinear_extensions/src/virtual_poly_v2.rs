@@ -270,37 +270,17 @@ mod tests {
     use goldilocks::{ExtensionField, Goldilocks, GoldilocksExt2};
     use std::sync::Arc;
 
-    #[test]
-    fn test_simple_sumcheck2() {
-        type B = Goldilocks;
-        type E = GoldilocksExt2;
-        let nv = 3;
-        let mut poly: VirtualPolynomialV2<E> = VirtualPolynomialV2::new(nv);
+    type B = Goldilocks;
+    type E = GoldilocksExt2;
 
-        let get_mle = |idx: u64| {
-            // let mut v: Vec<B> = vec![B::ZERO; 1 << nv];
-            // v[idx] = B::ONE;
-            let v: Vec<B> = (0_u64..1_u64 << nv)
-                .map(|i: u64| ((i >> idx) & 1).into())
-                .collect();
-            // not sure if this is needed. from_evaluations_vec() claims to expect the variables in little endian order.
-            // v.reverse();
-            let r: ArcDenseMultilinearExtension<GoldilocksExt2> =
-                Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, v));
-            r
-        };
+    fn get_mle(nv: usize, idx: u64) -> ArcDenseMultilinearExtension<E> {
+        let v: Vec<B> = (0_u64..1_u64 << nv)
+            .map(|i: u64| ((i >> idx) & 1).into())
+            .collect();
+        Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, v))
+    }
 
-        let x_mle = get_mle(0);
-        let y_mle = get_mle(1);
-        let z_mle = get_mle(2);
-
-        poly.add_mle_list(vec![x_mle], 1.into());
-        poly.add_mle_list(vec![y_mle], 5.into());
-        poly.add_mle_list(vec![z_mle], 2.into());
-
-        // polynomial should now equal g(x,y,z) = x + 5y + 2z
-        // claim: H = 32
-
+    fn eval_3var_poly(poly: &VirtualPolynomialV2<E>) -> E {
         let mut sum = E::ZERO;
 
         let pts = vec![E::ZERO, E::ONE];
@@ -313,7 +293,53 @@ mod tests {
                 }
             }
         }
+        sum
+    }
 
-        assert_eq!(sum.as_limbs()[0], 32.into());
+    #[test]
+    fn test_simple_sumcheck2() {
+        let nv = 3;
+        let mut poly: VirtualPolynomialV2<E> = VirtualPolynomialV2::new(nv);
+
+        let x_mle = get_mle(nv, 0);
+        let y_mle = get_mle(nv, 1);
+        let z_mle = get_mle(nv, 2);
+
+        poly.add_mle_list(vec![x_mle], 1.into());
+        poly.add_mle_list(vec![y_mle], 5.into());
+        poly.add_mle_list(vec![z_mle], E::from(0) - E::from(2));
+        // polynomial should now equal g(x,y,z) = x + 5y - 2z
+
+        let sum = eval_3var_poly(&poly);
+        assert_eq!(sum.as_limbs()[0], 16.into());
+    }
+
+    #[test]
+    fn test_simple_sumcheck3() {
+        let nv = 3;
+        let mut poly: VirtualPolynomialV2<E> = VirtualPolynomialV2::new(nv);
+
+        let x_mle = get_mle(nv, 0);
+        let y_mle = get_mle(nv, 1);
+
+        let r: ArcDenseMultilinearExtension<E> =
+            Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, vec![
+                B::ZERO,
+                B::ZERO,
+                B::ZERO,
+                B::ZERO,
+                B::ZERO,
+                B::ZERO,
+                B::ONE,
+                B::ONE,
+            ]));
+
+        poly.add_mle_list(vec![x_mle], 1.into());
+        poly.add_mle_list(vec![y_mle], 5.into());
+        poly.add_mle_list(vec![r], 2.into());
+        // polynomial should now equal g(x,y,z) = x + 5y + 2xy
+
+        let sum = eval_3var_poly(&poly);
+        assert_eq!(sum.as_limbs()[0], 16.into());
     }
 }
