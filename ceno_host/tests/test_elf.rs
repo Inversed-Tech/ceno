@@ -131,8 +131,8 @@ fn test_sorting() -> Result<()> {
     let mut rng = rand::thread_rng();
 
     // Provide some random numbers to sort.
-    hints.write(&(0..1000).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
-
+    // hints.write(&(0..1000).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
+    _ = hints.write(&(0..1000).map(|i| 1000 - i).collect::<Vec<_>>());
     let all_messages = ceno_host::run(CENO_PLATFORM, ceno_examples::sorting, &hints);
     for (i, msg) in enumerate(&all_messages) {
         println!("{i}: {msg}");

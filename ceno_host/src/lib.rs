@@ -137,6 +137,7 @@ pub fn run(platform: Platform, elf: &[u8], hints: &CenoStdin) -> Vec<String> {
     let hints: Vec<u32> = hints.into();
     let hints_range = platform.hints.clone();
 
+    println!("{:?}", &platform);
     let mut state = VMState::new(platform, Arc::new(program));
 
     for (addr, value) in zip(hints_range.iter_addresses(), hints) {

@@ -8,5 +8,5 @@ fn main() {
     let mut scratch: Vec<u32> = input.to_vec();
     scratch.sort();
     // Print any output you feel like, eg the first element of the sorted vector:
-    println!("{}", scratch[0]);
+    // println!("{}", scratch[0]);
 }

@@ -267,7 +267,7 @@ pub fn step<C: EmuContext>(ctx: &mut C) -> Result<()> {
         ));
     };
 
-    tracing::trace!("pc: {:x}, kind: {:?}", pc.0, insn.kind);
+    tracing::debug!("pc: {:x}, kind: {:?}", pc.0, insn.kind);
 
     if match InsnCategory::from(insn.kind) {
         InsnCategory::Compute => step_compute(ctx, insn.kind, &insn)?,
@@ -483,6 +483,15 @@ fn step_store<M: EmuContext>(ctx: &mut M, kind: InsnKind, decoded: &Instruction)
     let rs1 = ctx.load_register(decoded.rs1)?;
     let rs2 = ctx.load_register(decoded.rs2)?;
     let addr = ByteAddr(rs1.wrapping_add(decoded.imm as u32));
+
+    // println!(
+    //     "pc = {:?}, addr = {}, decoded.imm = {}",
+    //     ctx.get_pc(),
+    //     rs1,
+    //     decoded.imm as u32
+    // );
+    // println!("mstore: addr={:x?},rs1={:x}", addr, rs1);
+
     let shift = 8 * (addr.0 & 3);
     if !ctx.check_data_store(addr) {
         tracing::error!("mstore: addr={:x?},rs1={:x}", addr, rs1);
