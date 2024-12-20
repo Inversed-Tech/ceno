@@ -125,6 +125,21 @@ fn test_hints() -> Result<()> {
 }
 
 #[test]
+fn test_bubble_sorting() -> Result<()> {
+    use rand::Rng;
+    let mut hints = CenoStdin::default();
+    let mut rng = rand::thread_rng();
+
+    // Provide some random numbers to sort.
+    hints.write(&(0..500).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
+
+    let all_messages = ceno_host::run(CENO_PLATFORM, ceno_examples::bubble_sorting, &hints);
+    for msg in &all_messages {
+        print!("{msg}");
+    }
+    Ok(())
+}
+#[test]
 fn test_sorting() -> Result<()> {
     use rand::Rng;
     let mut hints = CenoStdin::default();
@@ -132,8 +147,22 @@ fn test_sorting() -> Result<()> {
 
     // Provide some random numbers to sort.
     // hints.write(&(0..1000).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
-    _ = hints.write(&(0..1000).map(|i| 1000 - i).collect::<Vec<_>>());
+    _ = hints.write(&(0..5000).map(|i| 1000 - i).collect::<Vec<_>>());
     let all_messages = ceno_host::run(CENO_PLATFORM, ceno_examples::sorting, &hints);
+    for (i, msg) in enumerate(&all_messages) {
+        println!("{i}: {msg}");
+    }
+    Ok(())
+}
+
+#[test]
+fn test_is_prime() -> Result<()> {
+    let mut hints = CenoStdin::default();
+
+    // Provide some random numbers to sort.
+    // hints.write(&(0..1000).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
+    _ = hints.write(&vec![10007u32]);
+    let all_messages = ceno_host::run(CENO_PLATFORM, ceno_examples::is_prime, &hints);
     for (i, msg) in enumerate(&all_messages) {
         println!("{i}: {msg}");
     }

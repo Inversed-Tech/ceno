@@ -10,12 +10,15 @@ use goldilocks::{Goldilocks, GoldilocksExt2};
 use itertools::Itertools;
 use mpcs::{Basefold, BasefoldRSParams};
 use std::{fs, panic};
-use tracing::level_filters::LevelFilter;
+use sumcheck::macros::entered_span;
+use tracing::{level_filters::LevelFilter, span::Entered};
 use tracing_forest::ForestLayer;
 use tracing_subscriber::{
     EnvFilter, Registry, filter::filter_fn, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
-use transcript::BasicTranscript as Transcript;
+use transcript::{
+    BasicTranscript as Transcript, BasicTranscriptWithStat as TranscriptWithStat, StatisticRecorder,
+};
 
 /// Prove the execution of a fixed RISC-V program.
 #[derive(Parser, Debug)]
@@ -97,7 +100,7 @@ fn main() {
 
     tracing::info!("Loading ELF file: {}", &args.elf);
     // let elf_bytes = fs::read(&args.elf).expect("read elf file");
-    let elf_bytes = ceno_examples::sorting;
+    let elf_bytes = ceno_examples::bubble_sorting;
     let program = Program::load_elf(&elf_bytes, u32::MAX).unwrap();
     let platform = setup_platform(
         args.platform,
@@ -115,11 +118,12 @@ fn main() {
 
     tracing::info!("Loading hints file: {:?}", args.hints);
     let hints = memory_from_file(&args.hints);
+
     let mut hints = CenoStdin::default();
     // let mut rng = rand::thread_rng();
 
     // Provide some random numbers to sort.
-    _ = hints.write(&(0..10).map(|i| 1000 - i).collect::<Vec<_>>());
+    _ = hints.write(&(0..500).map(|i| 500 - i).collect::<Vec<_>>());
     let hints: Vec<u32> = (&hints).into();
 
     assert!(
@@ -143,6 +147,17 @@ fn main() {
     );
 
     let (mut zkvm_proof, verifier) = state.expect("PrepSanityCheck should yield state.");
+
+    // do statistics
+    let serialize_size = bincode::serialize(&zkvm_proof).unwrap().len();
+    let stat_recorder = StatisticRecorder::default();
+    let transcript = TranscriptWithStat::new(&stat_recorder, b"riscv");
+    verifier.verify_proof(zkvm_proof.clone(), transcript).ok();
+    println!(
+        "e2e proof stat: proof size = {}, hashes count = {}",
+        serialize_size,
+        stat_recorder.into_inner().field_appended_num
+    );
 
     // do sanity check
     let transcript = Transcript::new(b"riscv");

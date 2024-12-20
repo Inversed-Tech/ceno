@@ -351,6 +351,7 @@ pub enum Checkpoint {
     PrepE2EProving,
     PrepWitnessGen,
     PrepSanityCheck,
+    PrepVerify,
     Complete,
 }
 
@@ -469,6 +470,10 @@ pub fn run_e2e_with_checkpoint<E: ExtensionField, PCS: PolynomialCommitmentSchem
         .expect("create_proof failed");
 
     let verifier = ZKVMVerifier::new(vk);
+
+    if let Checkpoint::PrepVerify = checkpoint {
+        return (None, Box::new(|| ()));
+    }
 
     run_e2e_verify(&verifier, zkvm_proof.clone(), exit_code, max_steps);
 

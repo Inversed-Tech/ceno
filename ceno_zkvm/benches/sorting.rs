@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, time::Duration};
+use std::time::Duration;
 
 use ceno_emul::{Platform, Program};
 use ceno_host::CenoStdin;
@@ -13,7 +13,7 @@ use mpcs::BasefoldDefault;
 
 criterion_group! {
   name = sorting;
-  config = Criterion::default().warm_up_time(Duration::from_millis(200));
+  config = Criterion::default().warm_up_time(Duration::from_millis(5000));
   targets = sorting_small
 }
 
@@ -24,7 +24,7 @@ type Pcs = BasefoldDefault<E>;
 type E = GoldilocksExt2;
 
 // Relevant init data for fibonacci run
-fn setup() -> (Program, Platform, Vec<u32>) {
+fn setup() -> (Program, Platform) {
     // let mut file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     // file_path.push("examples/fibonacci.elf");
     let stack_size = 32768;
@@ -32,46 +32,47 @@ fn setup() -> (Program, Platform, Vec<u32>) {
     let pub_io_size = 16;
     // let elf_bytes = fs::read(&file_path).expect("read elf file");
 
-    let mut hints = CenoStdin::default();
-    // let mut rng = rand::thread_rng();
-
-    // Provide some random numbers to sort.
-    _ = hints.write(&(0..500).map(|i| 1000 - i).collect::<Vec<_>>());
-
-    let program = Program::load_elf(ceno_examples::sorting, u32::MAX).unwrap();
+    let program = Program::load_elf(ceno_examples::bubble_sorting, u32::MAX).unwrap();
     let platform = setup_platform(Preset::Ceno, &program, stack_size, heap_size, pub_io_size);
-    (program, platform, (&hints).into())
+    (program, platform)
 }
 
 fn sorting_small(c: &mut Criterion) {
-    let (program, platform, hints) = setup();
+    let (program, platform) = setup();
 
-    let max_steps = usize::MAX;
-    let mut group = c.benchmark_group(format!("sorting_{}", max_steps));
-    group.sample_size(NUM_SAMPLES);
+    for n in [100, 200, 500] {
+        let max_steps = usize::MAX;
+        let mut hints = CenoStdin::default();
+        _ = hints.write(&(0..n).map(|i| n - i).collect::<Vec<_>>());
+        let hints: Vec<u32> = (&hints).into();
 
-    // Benchmark the proving time
-    group.bench_function(
-        BenchmarkId::new("sorting_prove", format!("sorting_{}", max_steps)),
-        |b| {
-            b.iter_with_setup(
-                || {
-                    run_e2e_with_checkpoint::<E, Pcs>(
-                        program.clone(),
-                        platform.clone(),
-                        hints.clone(),
-                        max_steps,
-                        Checkpoint::PrepE2EProving,
-                    )
-                },
-                |(_, prove)| {
-                    prove();
-                },
-            );
-        },
-    );
+        let mut group = c.benchmark_group(format!("sorting_{}", max_steps));
+        group.sample_size(NUM_SAMPLES);
 
-    group.finish();
+        // Benchmark the proving time
+        group.bench_function(
+            BenchmarkId::new("sorting", format!("sorting_n={}", n)),
+            |b| {
+                b.iter_custom(|iters| {
+                    let mut time = Duration::new(0, 0);
+                    for _ in 0..iters {
+                        let instant = std::time::Instant::now();
+                        _ = run_e2e_with_checkpoint::<E, Pcs>(
+                            program.clone(),
+                            platform.clone(),
+                            hints.clone(),
+                            max_steps,
+                            Checkpoint::PrepVerify,
+                        );
+                        time += instant.elapsed();
+                    }
+                    time
+                });
+            },
+        );
+
+        group.finish();
+    }
 
     type E = GoldilocksExt2;
 }
