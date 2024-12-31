@@ -1,0 +1,22 @@
+[package]
+categories.workspace = true
+description = "Protocol"
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "protocol"
+readme.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+ark-std.workspace = true
+ff.workspace = true
+ff_ext.workspace = true
+goldilocks.workspace = true
+itertools.workspace = true
+rand.workspace = true
+rayon.workspace = true
+subprotocols.workspace = true
+thiserror.workspace = true
+transcript.workspace = true

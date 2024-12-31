@@ -2198,6 +2198,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "protocol"
+version = "0.1.0"
+dependencies = [
+ "ark-std",
+ "ff",
+ "ff_ext",
+ "goldilocks",
+ "itertools 0.13.0",
+ "rand",
+ "rayon",
+ "subprotocols",
+ "thiserror 2.0.8",
+ "transcript",
+]
+
+[[package]]
 name = "ptr_meta"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2698,6 +2714,20 @@ dependencies = [
  "lazy_static",
  "rand",
  "rustc-hex",
+]
+
+[[package]]
+name = "subprotocols"
+version = "0.1.0"
+dependencies = [
+ "ark-std",
+ "ff",
+ "ff_ext",
+ "goldilocks",
+ "itertools 0.13.0",
+ "rand",
+ "thiserror 2.0.8",
+ "transcript",
 ]
 
 [[package]]
