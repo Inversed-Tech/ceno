@@ -30,3 +30,8 @@ criterion.workspace = true
 [[bench]]
 harness = false
 name = "devirgo_sumcheck"
+
+
+[[bench]]
+harness = false
+name = "devirgo_sumcheck_logup"
