@@ -3,7 +3,10 @@ use std::{iter, ops::Mul};
 use ff_ext::ExtensionField;
 use itertools::{Itertools, chain, izip};
 use multilinear_extensions::virtual_poly::build_eq_x_r_vec_with_scalar;
+<<<<<<< HEAD
 use p3_field::Field;
+=======
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
@@ -47,7 +50,11 @@ pub fn eq_vecs<'a, E: ExtensionField>(
 }
 
 #[inline(always)]
+<<<<<<< HEAD
 pub fn eq<F: Field>(x: &F, y: &F) -> F {
+=======
+pub fn eq<F: PrimeField>(x: &F, y: &F) -> F {
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
     // x * y + (1 - x) * (1 - y)
     let xy = *x * *y;
     xy + xy - *x - *y + F::ONE
@@ -67,7 +74,11 @@ pub fn fix_variables_inplace<E: ExtensionField>(ext_mle: &mut [E], r: &E) {
         .par_iter_mut()
         .chunks(2)
         .with_min_len(64)
+<<<<<<< HEAD
         .for_each(|mut buf| *buf[0] = *buf[0] + (*buf[1] - *buf[0]) * *r);
+=======
+        .for_each(|mut buf| *buf[0] = *buf[0] + (*buf[1] - *buf[0]) * r);
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
     // sequentially update buf[b1, b2,..bt] = buf[b1, b2,..bt, 0]
     let half_len = ext_mle.len() >> 1;
     for index in 0..half_len {
@@ -158,10 +169,16 @@ fn field_factorial<F: Field>(a: usize) -> F {
 
 #[cfg(test)]
 mod test {
+<<<<<<< HEAD
     use itertools::Itertools;
     use multilinear_extensions::virtual_poly::eq_eval;
     use p3_field::{PrimeCharacteristicRing, extension::BinomialExtensionField};
     use p3_goldilocks::Goldilocks as F;
+=======
+    use goldilocks::{Goldilocks as F, GoldilocksExt2 as E};
+    use itertools::Itertools;
+    use multilinear_extensions::virtual_poly::eq_eval;
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
 
     use crate::field_vec;
 

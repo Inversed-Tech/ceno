@@ -347,7 +347,11 @@ mod test {
             vec![],
             base_mle_refs,
             vec![],
+<<<<<<< HEAD
             E::from_u64(6),
+=======
+            E::from(6),
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
         );
     }
 
@@ -397,7 +401,11 @@ mod test {
 
     #[test]
     fn test_sumcheck_multi_points() {
+<<<<<<< HEAD
         let challenges = vec![E::from_u64(2)];
+=======
+        let challenges = vec![E::from(2)];
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
 
         let points = [field_vec![E, 2, 3], field_vec![E, 5, 7], field_vec![
             E, 2, 5

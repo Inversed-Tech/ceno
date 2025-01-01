@@ -1,7 +1,10 @@
 use ff_ext::ExtensionField;
 use itertools::{Itertools, zip_eq};
 use multilinear_extensions::virtual_poly::eq_eval;
+<<<<<<< HEAD
 use p3_field::{Field, PrimeCharacteristicRing};
+=======
+>>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
 
 use crate::{op_by_type, utils::i64_to_field};
 
