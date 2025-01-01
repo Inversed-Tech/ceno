@@ -22,10 +22,11 @@ impl Chip {
         array::from_fn(|i| i + self.n_committed_exts - N)
     }
 
-    /// Allocate `Witness` and `EvalExpression` for the input polynomials in a layer.
-    /// Where `Witness` denotes the index and `EvalExpression` denotes the position
-    /// to place the evaluation of the polynomial after processing the layer prover
-    /// for each polynomial. This should be called at most once for each layer!
+    /// Allocate `Witness` and `EvalExpression` for the input polynomials in a
+    /// layer. Where `Witness` denotes the index and `EvalExpression`
+    /// denotes the position to place the evaluation of the polynomial after
+    /// processing the layer prover for each polynomial. This should be
+    /// called at most once for each layer!
     #[allow(clippy::type_complexity)]
     pub fn allocate_wits_in_layer<const M: usize, const N: usize>(
         &mut self,
@@ -62,14 +63,16 @@ impl Chip {
         array::from_fn(|i| Constant::Challenge(i + self.n_challenges - N))
     }
 
-    /// Allocate a PCS opening action to a base polynomial with index `wit_index`.
-    /// The `EvalExpression` represents the expression to compute the evaluation.
+    /// Allocate a PCS opening action to a base polynomial with index
+    /// `wit_index`. The `EvalExpression` represents the expression to
+    /// compute the evaluation.
     pub fn allocate_base_opening(&mut self, wit_index: usize, eval: EvalExpression) {
         self.base_openings.push((wit_index, eval));
     }
 
-    /// Allocate a PCS opening action to an ext polynomial with index `wit_index`.
-    /// The `EvalExpression` represents the expression to compute the evaluation.
+    /// Allocate a PCS opening action to an ext polynomial with index
+    /// `wit_index`. The `EvalExpression` represents the expression to
+    /// compute the evaluation.
     pub fn allocate_ext_opening(&mut self, wit_index: usize, eval: EvalExpression) {
         self.ext_openings.push((wit_index, eval));
     }

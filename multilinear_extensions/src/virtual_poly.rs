@@ -413,11 +413,16 @@ pub fn build_eq_x_r_vec_with_scalar<E: ExtensionField + Mul<F, Output = E> + Fro
         build_eq_x_r_helper_sequential(r, &mut evals, E::from(scalar));
     } else {
 <<<<<<< HEAD
+<<<<<<< HEAD
         let eq_ts =
             build_eq_x_r_vec_sequential_with_scalar(&r[(r.len() - nbits)..], E::from(scalar));
 =======
         let eq_ts = build_eq_x_r_vec_sequential(&r[(r.len() - nbits)..]);
 >>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
+=======
+        let eq_ts =
+            build_eq_x_r_vec_sequential_with_scalar(&r[(r.len() - nbits)..], E::from(scalar));
+>>>>>>> c49671de (Add comments and fix some tiny bugs)
 
         // eq(x, r) = eq(x_lo, r_lo) * eq(x_hi, r_hi)
         // where rlen = r.len(), x_lo = x[0..rlen-nbits], x_hi = x[rlen-nbits..]

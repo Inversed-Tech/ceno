@@ -15,8 +15,8 @@ pub struct Chip {
     /// The number of challenges generated through the whole protocols
     /// (except the ones inside sumcheck protocols).
     pub n_challenges: usize,
-    /// All input evaluations generated at the end of layer protocols will be stored
-    /// in a vector and this is the length.
+    /// All input evaluations generated at the end of layer protocols will be
+    /// stored in a vector and this is the length.
     pub n_evaluations: usize,
     /// The layers of the GKR circuit, in the order outputs-to-inputs.
     pub layers: Vec<Layer>,

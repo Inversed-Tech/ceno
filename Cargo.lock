@@ -1172,6 +1172,7 @@ name = "gkr_iop"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+<<<<<<< HEAD
  "ff_ext",
  "itertools 0.13.0",
  "multilinear_extensions",
@@ -1181,6 +1182,17 @@ dependencies = [
  "rayon",
  "subprotocols",
  "thiserror 1.0.69",
+=======
+ "ff",
+ "ff_ext",
+ "goldilocks",
+ "itertools 0.13.0",
+ "multilinear_extensions",
+ "rand",
+ "rayon",
+ "subprotocols",
+ "thiserror 2.0.8",
+>>>>>>> c49671de (Add comments and fix some tiny bugs)
  "transcript",
 ]
 
@@ -2195,23 +2207,6 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
-]
-
-[[package]]
-name = "protocol"
-version = "0.1.0"
-dependencies = [
- "ark-std",
- "ff",
- "ff_ext",
- "goldilocks",
- "itertools 0.13.0",
- "multilinear_extensions",
- "rand",
- "rayon",
- "subprotocols",
- "thiserror 2.0.8",
- "transcript",
 ]
 
 [[package]]
