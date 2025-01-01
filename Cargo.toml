@@ -10,7 +10,7 @@ members = [
   "multilinear_extensions",
   "sumcheck_macro",
   "poseidon",
-  "protocol",
+  "gkr_iop",
   "subprotocols",
   "sumcheck",
   "transcript",
