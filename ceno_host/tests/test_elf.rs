@@ -169,10 +169,12 @@ fn test_sorting() -> Result<()> {
 fn test_is_prime() -> Result<()> {
     let mut hints = CenoStdin::default();
 
-    // Provide some random numbers to sort.
-    // hints.write(&(0..1000).map(|_| rng.gen::<u32>()).collect::<Vec<_>>())?;
-    _ = hints.write(&vec![10007u32]);
-    let all_messages = ceno_host::run(CENO_PLATFORM, ceno_examples::is_prime, &hints);
+    _ = hints.write(&10000u32);
+    let all_messages = messages_to_strings(&ceno_host::run(
+        CENO_PLATFORM,
+        ceno_examples::is_prime,
+        &hints,
+    ));
     for (i, msg) in enumerate(&all_messages) {
         println!("{i}: {msg}");
     }
