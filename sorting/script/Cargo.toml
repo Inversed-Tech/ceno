@@ -1,11 +1,11 @@
 [package]
 version = "0.1.0"
-name = "is_prime-script"
+name = "sorting-script"
 edition = "2021"
-default-run = "is_prime"
+default-run = "sorting"
 
 [[bin]]
-name = "is_prime"
+name = "sorting"
 path = "src/bin/main.rs"
 
 [[bin]]
@@ -20,7 +20,7 @@ clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 hex = "0.4.3"
 alloy-sol-types = { workspace = true }
-is_prime-lib = { path = "../lib" }
+sorting-lib = { path = "../lib" }
 
 [build-dependencies]
 sp1-helper = "3.0.0"

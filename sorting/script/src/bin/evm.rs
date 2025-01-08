@@ -12,15 +12,15 @@
 
 use alloy_sol_types::SolType;
 use clap::{Parser, ValueEnum};
-use is_prime_lib::PublicValuesStruct;
 use serde::{Deserialize, Serialize};
+use sorting_lib::PublicValuesStruct;
 use sp1_sdk::{
     include_elf, HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use std::path::PathBuf;
 
 /// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const is_prime_ELF: &[u8] = include_elf!("is_prime-program");
+pub const sorting_ELF: &[u8] = include_elf!("sorting-program");
 
 /// The arguments for the EVM command.
 #[derive(Parser, Debug)]
@@ -42,7 +42,7 @@ enum ProofSystem {
 /// A fixture that can be used to test the verification of SP1 zkVM proofs inside Solidity.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct SP1is_primeProofFixture {
+struct SP1sortingProofFixture {
     cnt_primes: u32,
     n: u32,
     vkey: String,
@@ -61,7 +61,7 @@ fn main() {
     let client = ProverClient::new();
 
     // Setup the program.
-    let (pk, vk) = client.setup(is_prime_ELF);
+    let (pk, vk) = client.setup(sorting_ELF);
 
     // Setup the inputs.
     let mut stdin = SP1Stdin::new();
@@ -92,7 +92,7 @@ fn create_proof_fixture(
         PublicValuesStruct::abi_decode(bytes, false).unwrap();
 
     // Create the testing fixture so we can test things end-to-end.
-    let fixture = SP1is_primeProofFixture {
+    let fixture = SP1sortingProofFixture {
         cnt_primes,
         n,
         vkey: vk.bytes32().to_string(),
