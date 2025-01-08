@@ -519,7 +519,10 @@ fn step_store<M: EmuContext>(ctx: &mut M, kind: InsnKind, decoded: &Instruction)
 fn step_system<M: EmuContext>(ctx: &mut M, kind: InsnKind, decoded: &Instruction) -> Result<bool> {
     match kind {
         InsnKind::ECALL => ctx.ecall(),
-        _ => ctx.trap(TrapCause::IllegalInstruction(decoded.raw)),
+        _ => {
+            println!("{:?}", decoded);
+            ctx.trap(TrapCause::IllegalInstruction(decoded.raw))
+        }
     }
 }
 

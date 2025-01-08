@@ -102,7 +102,7 @@ fn main() {
 
     tracing::info!("Loading ELF file: {}", &args.elf);
     // let elf_bytes = fs::read(&args.elf).expect("read elf file");
-    let elf_bytes = ceno_examples::is_prime;
+    let elf_bytes = ceno_examples::sorting;
     let program = Program::load_elf(&elf_bytes, u32::MAX).unwrap();
     let platform = setup_platform(
         args.platform,
