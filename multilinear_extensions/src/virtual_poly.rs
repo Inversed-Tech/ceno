@@ -378,7 +378,10 @@ pub fn build_eq_x_r_vec<E: ExtensionField>(r: &[E]) -> Vec<E> {
     }
 }
 
-#[tracing::instrument(skip_all, name = "multilinear_extensions::build_eq_x_r_vec")]
+#[tracing::instrument(
+    skip_all,
+    name = "multilinear_extensions::build_eq_x_r_vec_with_scalar"
+)]
 pub fn build_eq_x_r_vec_with_scalar<E: ExtensionField + Mul<F, Output = E> + From<F>, F>(
     r: &[E],
     scalar: F,

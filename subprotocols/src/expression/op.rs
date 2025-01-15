@@ -8,7 +8,7 @@ use itertools::zip_eq;
 
 use crate::{define_commutative_op_mle2, define_op_mle, define_op_mle2};
 
-use super::{Expression, FieldType, UniPolyVectorType, VectorType};
+use super::{Expression, ScalarType, UniPolyVectorType, VectorType};
 
 impl Add for Expression {
     type Output = Self;
@@ -75,7 +75,7 @@ define_op_mle!(VectorType, Neg, neg, |x| {
     x
 });
 
-define_commutative_op_mle2!(FieldType, Add, add, |x, y| x + y);
-define_commutative_op_mle2!(FieldType, Mul, mul, |x, y| x * y);
-define_op_mle2!(FieldType, Sub, sub, |x, y| x + (-y));
-define_op_mle!(FieldType, Neg, neg, |x| -x);
+define_commutative_op_mle2!(ScalarType, Add, add, |x, y| x + y);
+define_commutative_op_mle2!(ScalarType, Mul, mul, |x, y| x * y);
+define_op_mle2!(ScalarType, Sub, sub, |x, y| x + (-y));
+define_op_mle!(ScalarType, Neg, neg, |x| -x);

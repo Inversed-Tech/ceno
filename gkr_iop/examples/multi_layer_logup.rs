@@ -8,14 +8,18 @@ use gkr_iop::{
     gkr::{
         GKRCircuitWitness, GKRProverOutput,
         layer::{Layer, LayerType, LayerWitness},
-        mock::MockProver,
     },
 };
 use goldilocks::GoldilocksExt2;
 use itertools::{Itertools, izip};
 use rand::{Rng, rngs::OsRng};
-use subprotocols::expression::{Constant, Expression, VectorType};
+use subprotocols::expression::{Constant, Expression};
 use transcript::{BasicTranscript, Transcript};
+
+#[cfg(debug_assertions)]
+use gkr_iop::gkr::mock::MockProver;
+#[cfg(debug_assertions)]
+use subprotocols::expression::VectorType;
 
 type E = GoldilocksExt2;
 
@@ -28,9 +32,9 @@ struct TowerParams {
 struct TowerChipLayout<E> {
     params: TowerParams,
 
-    // Commit poly indices.
-    committed_table: usize,
-    committed_count: usize,
+    // Committed poly indices.
+    committed_table_id: usize,
+    committed_count_id: usize,
 
     lookup_challenge: Constant,
 
@@ -49,8 +53,8 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
         }
     }
 
-    fn build_commit_phase1(&mut self, chip: &mut Chip) {
-        [self.committed_table, self.committed_count] = chip.allocate_committed_base();
+    fn build_commit_phase(&mut self, chip: &mut Chip) {
+        [self.committed_table_id, self.committed_count_id] = chip.allocate_committed_base();
         [self.lookup_challenge] = chip.allocate_challenges();
     }
 
@@ -134,14 +138,14 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
             vec![updated_table],
         ));
 
-        chip.allocate_base_opening(self.committed_table, table.1);
-        chip.allocate_base_opening(self.committed_count, count);
+        chip.allocate_base_opening(self.committed_table_id, table.1);
+        chip.allocate_base_opening(self.committed_count_id, count);
     }
 }
 
 pub struct TowerChipTrace {
     pub table: Vec<u64>,
-    pub count: Vec<u64>,
+    pub multiplicity: Vec<u64>,
 }
 
 impl<E> ProtocolWitnessGenerator<E> for TowerChipLayout<E>
@@ -152,15 +156,19 @@ where
 
     fn phase1_witness(&self, phase1: Self::Trace) -> Vec<Vec<E::BaseField>> {
         let mut res = vec![vec![]; 2];
-        res[self.committed_table] = phase1.table.into_iter().map(E::BaseField::from).collect();
-        res[self.committed_count] = phase1.count.into_iter().map(E::BaseField::from).collect();
+        res[self.committed_table_id] = phase1.table.into_iter().map(E::BaseField::from).collect();
+        res[self.committed_count_id] = phase1
+            .multiplicity
+            .into_iter()
+            .map(E::BaseField::from)
+            .collect();
         res
     }
 
     fn gkr_witness(&self, phase1: &[Vec<E::BaseField>], challenges: &[E]) -> GKRCircuitWitness<E> {
         // Generate witnesses.
-        let table = &phase1[self.committed_table];
-        let count = &phase1[self.committed_count];
+        let table = &phase1[self.committed_table_id];
+        let count = &phase1[self.committed_count_id];
         let beta = self.lookup_challenge.entry(challenges);
 
         // Compute table + beta.
@@ -212,7 +220,10 @@ fn main() {
         let count = (0..1 << log_size)
             .map(|_| OsRng.gen_range(0..1 << log_size as u64))
             .collect_vec();
-        let phase1_witness = layout.phase1_witness(TowerChipTrace { table, count });
+        let phase1_witness = layout.phase1_witness(TowerChipTrace {
+            table,
+            multiplicity: count,
+        });
 
         let mut prover_transcript = BasicTranscript::<E>::new(b"protocol");
 

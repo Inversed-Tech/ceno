@@ -5,7 +5,7 @@ use multilinear_extensions::virtual_poly::eq_eval;
 
 use crate::{op_by_type, utils::i64_to_field};
 
-use super::{Constant, Expression, FieldType, UniPolyVectorType, VectorType, Witness};
+use super::{Constant, Expression, ScalarType, UniPolyVectorType, VectorType, Witness};
 
 impl Expression {
     pub fn degree(&self) -> usize {
@@ -325,13 +325,13 @@ impl Constant {
 
     pub fn evaluate<E: ExtensionField>(&self, challenges: &[E]) -> E {
         let res = self.evaluate_inner(challenges);
-        op_by_type!(FieldType, res, |b| b, |e| e, |bf| E::from(bf))
+        op_by_type!(ScalarType, res, |b| b, |e| e, |bf| E::from(bf))
     }
 
-    fn evaluate_inner<E: ExtensionField>(&self, challenges: &[E]) -> FieldType<E> {
+    fn evaluate_inner<E: ExtensionField>(&self, challenges: &[E]) -> ScalarType<E> {
         match self {
-            Constant::Base(value) => FieldType::Base(i64_to_field(*value)),
-            Constant::Challenge(index) => FieldType::Ext(challenges[*index]),
+            Constant::Base(value) => ScalarType::Base(i64_to_field(*value)),
+            Constant::Challenge(index) => ScalarType::Ext(challenges[*index]),
             Constant::Sum(c0, c1) => c0.evaluate_inner(challenges) + c1.evaluate_inner(challenges),
             Constant::Product(c0, c1) => {
                 c0.evaluate_inner(challenges) * c1.evaluate_inner(challenges)
@@ -340,11 +340,11 @@ impl Constant {
             Constant::Pow(c, degree) => {
                 let value = c.evaluate_inner(challenges);
                 op_by_type!(
-                    FieldType,
+                    ScalarType,
                     value,
                     |value| { value.pow([*degree as u64]) },
-                    |ext| FieldType::Ext(ext),
-                    |base| FieldType::Base(base)
+                    |ext| ScalarType::Ext(ext),
+                    |base| ScalarType::Base(base)
                 )
             }
         }

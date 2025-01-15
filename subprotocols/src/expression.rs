@@ -148,7 +148,7 @@ impl<E: ExtensionField> std::fmt::Debug for VectorType<E> {
 }
 
 #[derive(Clone, Debug)]
-enum FieldType<E: ExtensionField> {
+enum ScalarType<E: ExtensionField> {
     Base(E::BaseField),
     Ext(E),
 }
