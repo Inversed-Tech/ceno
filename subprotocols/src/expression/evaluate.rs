@@ -345,7 +345,11 @@ impl Constant {
                 op_by_type!(
                     ScalarType,
                     value,
+<<<<<<< HEAD
                     |value| { value.exp_u64(*degree as u64) },
+=======
+                    |value| { value.pow([*degree as u64]) },
+>>>>>>> 87d1a30e (Tiny fix according to the latest comments.)
                     |ext| ScalarType::Ext(ext),
                     |base| ScalarType::Base(base)
                 )

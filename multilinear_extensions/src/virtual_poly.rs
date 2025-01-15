@@ -379,13 +379,19 @@ pub fn build_eq_x_r_vec<E: ExtensionField>(r: &[E]) -> Vec<E> {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 87d1a30e (Tiny fix according to the latest comments.)
 #[tracing::instrument(
     skip_all,
     name = "multilinear_extensions::build_eq_x_r_vec_with_scalar"
 )]
+<<<<<<< HEAD
 =======
 #[tracing::instrument(skip_all, name = "multilinear_extensions::build_eq_x_r_vec")]
 >>>>>>> acea7d72 (Remove buffers and replace the underlying util functions.)
+=======
+>>>>>>> 87d1a30e (Tiny fix according to the latest comments.)
 pub fn build_eq_x_r_vec_with_scalar<E: ExtensionField + Mul<F, Output = E> + From<F>, F>(
     r: &[E],
     scalar: F,
