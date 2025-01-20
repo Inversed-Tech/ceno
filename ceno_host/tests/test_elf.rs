@@ -265,6 +265,7 @@ fn test_ceno_rt_keccak() -> Result<()> {
                 lo | (hi << 32)
             })
             .collect_vec();
+        println!("{:?}", got);
         assert_eq!(got, expect);
     }
 
