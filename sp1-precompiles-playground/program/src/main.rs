@@ -14,9 +14,11 @@ use alloy_sol_types::SolType;
 use fibonacci_lib::{fibonacci, PublicValuesStruct};
 use sp1_zkvm::syscalls::{
     syscall_keccak_permute, syscall_secp256k1_add, syscall_secp256k1_decompress,
-    syscall_secp256k1_double,
+    syscall_secp256k1_double, syscall_sha256_extend,
 };
 
+/// One unit test for each implemented syscall
+/// Meant to be used identically in a sp1 guest to confirm compatibility
 pub fn test_syscalls() {
     /// `bytes` is expected to contain the uncompressed representation of
     /// a curve point, as described in https://docs.rs/secp/latest/secp/struct.Point.html
@@ -24,18 +26,14 @@ pub fn test_syscalls() {
     /// The return value is an array of words compatible with the sp1 syscall for `add` and `double`
     /// Notably, these words should encode the X and Y coordinates of the point
     /// in "little endian" and not "big endian" as is the case of secp
-    ///
     fn bytes_to_words(bytes: [u8; 65]) -> [u32; 16] {
         // ignore the tag byte (specific to the secp repr.)
-        let mut bytes: [u8; 64] = bytes.clone()[1..].try_into().unwrap();
+        let mut bytes: [u8; 64] = bytes[1..].try_into().unwrap();
 
         // Reverse the order of bytes for each coordinate
         bytes[0..32].reverse();
         bytes[32..].reverse();
-        let mut ret = std::array::from_fn(|i| {
-            u32::from_le_bytes(bytes[4 * i..4 * (i + 1)].try_into().unwrap())
-        });
-        ret
+        std::array::from_fn(|i| u32::from_le_bytes(bytes[4 * i..4 * (i + 1)].try_into().unwrap()))
     }
     {
         const P: [u8; 65] = [
@@ -105,12 +103,12 @@ pub fn test_syscalls() {
             .try_into()
             .unwrap();
 
-        /// Note that in the case of the `decompress` syscall the X-coordinate which is part of
-        /// the compressed representation has type [u8; 64] and expects the bytes
-        /// to be "big-endian".
-        ///
-        /// Contrast with the format used for `add` and `double`, where arrays of words are used
-        /// and "little-endian" ordering is expected.
+        // Note that in the case of the `decompress` syscall the X-coordinate which is part of
+        // the compressed representation has type [u8; 64] and expects the bytes
+        // to be "big-endian".
+        //
+        // Contrast with the format used for `add` and `double`, where arrays of words are used
+        // and "little-endian" ordering is expected.
         syscall_secp256k1_decompress(&mut compressed_with_space, is_odd);
         assert!(compressed_with_space == DECOMPRESSED);
     }
@@ -148,6 +146,27 @@ pub fn test_syscalls() {
         ];
 
         assert!(state == KECCAK_ON_ZEROS);
+    }
+
+    {
+        let mut words = [0u32; 64];
+        for i in 0..16 {
+            words[i] = i as u32;
+        }
+
+        let expected = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 34013193, 67559435, 1711661200,
+            3020350282, 1447362251, 3118632270, 4004188394, 690615167, 6070360, 1105370215,
+            2385558114, 2348232513, 507799627, 2098764358, 5845374, 823657968, 2969863067,
+            3903496557, 4274682881, 2059629362, 1849247231, 2656047431, 835162919, 2096647516,
+            2259195856, 1779072524, 3152121987, 4210324067, 1557957044, 376930560, 982142628,
+            3926566666, 4164334963, 789545383, 1028256580, 2867933222, 3843938318, 1135234440,
+            390334875, 2025924737, 3318322046, 3436065867, 652746999, 4261492214, 2543173532,
+            3334668051, 3166416553, 634956631,
+        ];
+
+        syscall_sha256_extend(&mut words);
+        assert_eq!(words, expected);
     }
 }
 
