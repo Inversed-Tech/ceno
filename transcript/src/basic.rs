@@ -67,16 +67,17 @@ mod tests {
     use super::*;
     use goldilocks::{Goldilocks, GoldilocksExt2};
     use plonky2::{hash::poseidon::PoseidonHash, iop::challenger::Challenger};
-    use plonky2_field::{
-        extension::quadratic::QuadraticExtension, goldilocks_field::GoldilocksField, types::Field,
-    };
+    use plonky2_field::{goldilocks_field::GoldilocksField, types::Field};
 
+    // this unit test doesn't tell you anything because ceno's transcript permutes on every input while plonky2's does not.
+    // however, if you inspect the logic of plonky2's challenger, you will see that it avoids the padding issue by waiting until
+    // rate elements have been written before permuting.
+    // ceno's basic transcript does not do this and it does not pad either.
     #[test]
     fn cmp_basic_plonky2() {
         // the rate is 8 field elements.
         // BasicTranscript will ingest these then permute.
         const ZEROS: [u8; 64] = [0_u8; 64];
-        let zeros = vec![0_u8; 8 * 8];
         let mut transcript: BasicTranscript<GoldilocksExt2> = BasicTranscript::new(&ZEROS);
 
         // need to initialize challenger the same way
@@ -97,6 +98,38 @@ mod tests {
             Goldilocks(plonky_challenges[0].0),
             Goldilocks(plonky_challenges[1].0),
         ]);
+
+        // check that the transcripts were initialized the same
         assert_eq!(ceno_challenge, plonky_challenge);
+
+        // now push some more data and check again
+
+        // the plonky2 transcript will take in 8 field elements
+        for input in 0..8 {
+            let plonky_elem = GoldilocksField::from_canonical_u64(input);
+            challenger.observe_element(plonky_elem);
+        }
+
+        // get the 8 elements from the transcript (in reverse order), then reverse the order again
+        plonky_challenges.clear();
+        for _ in 0..8 {
+            plonky_challenges.push(challenger.get_challenge());
+        }
+        plonky_challenges.reverse();
+
+        // get the first 2 field elements
+        let plonky_ext = GoldilocksExt2([
+            Goldilocks(plonky_challenges[0].0),
+            Goldilocks(plonky_challenges[1].0),
+        ]);
+
+        // ingest the same elements into the ceno transcript.
+        for input in 0..8 {
+            transcript.append_field_elements(&vec![Goldilocks(input)]);
+        }
+
+        let ceno_ext = transcript.read_challenge().elements;
+
+        assert_eq!(ceno_ext, plonky_ext);
     }
 }
