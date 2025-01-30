@@ -61,3 +61,42 @@ impl<E: ExtensionField> Transcript<E> for BasicTranscript<E> {
 }
 
 impl<E: ExtensionField> ForkableTranscript<E> for BasicTranscript<E> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use goldilocks::{Goldilocks, GoldilocksExt2};
+    use plonky2::{hash::poseidon::PoseidonHash, iop::challenger::Challenger};
+    use plonky2_field::{
+        extension::quadratic::QuadraticExtension, goldilocks_field::GoldilocksField, types::Field,
+    };
+
+    #[test]
+    fn cmp_basic_plonky2() {
+        // the rate is 8 field elements.
+        // BasicTranscript will ingest these then permute.
+        const ZEROS: [u8; 64] = [0_u8; 64];
+        let zeros = vec![0_u8; 8 * 8];
+        let mut transcript: BasicTranscript<GoldilocksExt2> = BasicTranscript::new(&ZEROS);
+
+        // need to initialize challenger the same way
+        let mut challenger: Challenger<GoldilocksField, PoseidonHash> = Challenger::new();
+        let zero_elements: [GoldilocksField; 8] = [GoldilocksField::ZERO; 8];
+        challenger.observe_elements(&zero_elements);
+
+        // get_challenges calls pop() on the rate vec - it returns the elements in reverse order.
+        let mut plonky_challenges = vec![];
+        for _ in 0..8 {
+            plonky_challenges.push(challenger.get_challenge());
+        }
+        plonky_challenges.reverse();
+
+        let ceno_challenge = transcript.read_challenge().elements;
+
+        let plonky_challenge = GoldilocksExt2([
+            Goldilocks(plonky_challenges[0].0),
+            Goldilocks(plonky_challenges[1].0),
+        ]);
+        assert_eq!(ceno_challenge, plonky_challenge);
+    }
+}

@@ -16,3 +16,7 @@ ff_ext = { path = "../ff_ext" }
 goldilocks.workspace = true
 poseidon.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+plonky2_field = { git = "ssh://git@github.com/0xPolygonZero/plonky2.git"}
+plonky2 = { git = "ssh://git@github.com/0xPolygonZero/plonky2.git" }
