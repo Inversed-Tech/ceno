@@ -13,8 +13,10 @@ use core::panic;
 use alloy_sol_types::SolType;
 use fibonacci_lib::{fibonacci, PublicValuesStruct};
 use sp1_zkvm::syscalls::{
-    syscall_keccak_permute, syscall_secp256k1_add, syscall_secp256k1_decompress,
-    syscall_secp256k1_double, syscall_sha256_extend,
+    syscall_bn254_add, syscall_bn254_double, syscall_bn254_fp2_addmod, syscall_bn254_fp2_mulmod,
+    syscall_bn254_fp_addmod, syscall_bn254_fp_mulmod, syscall_keccak_permute,
+    syscall_secp256k1_add, syscall_secp256k1_decompress, syscall_secp256k1_double,
+    syscall_sha256_extend,
 };
 
 /// One unit test for each implemented syscall
@@ -167,6 +169,15 @@ pub fn test_syscalls() {
 
         syscall_sha256_extend(&mut words);
         assert_eq!(words, expected);
+    }
+
+    {
+        let mut a = [2u32; 16];
+        a[6] = 7;
+        let mut b = [1u32; 16];
+        syscall_bn254_add(&mut a, &mut b);
+        println!("{:?}", a);
+        println!("{:?}", b);
     }
 }
 
