@@ -1197,6 +1197,30 @@ impl TowerProver {
         // TODO mayber give a better naming?
         assert_eq!(num_fanin, 2);
 
+        println!("prod_specs dimensions: {}", prod_specs.len());
+        for (i, spec) in prod_specs.iter().enumerate() {
+            for (j, witnesses) in spec.witness.iter().enumerate() {
+                for (k, witness) in witnesses.iter().enumerate() {
+                    println!(
+                        "prod_specs[{i}].witnesses[{j}][{k}] mle length: {}",
+                        witness.evaluations().len()
+                    );
+                }
+            }
+        }
+
+        println!("logup_specs dimensions: {}", logup_specs.len());
+        for (i, spec) in logup_specs.iter().enumerate() {
+            for (j, witnesses) in spec.witness.iter().enumerate() {
+                for (k, witness) in witnesses.iter().enumerate() {
+                    println!(
+                        "logup_specs[{i}].witness[{j}][{k}] mle length: {}",
+                        witness.evaluations().len()
+                    );
+                }
+            }
+        }
+
         let mut proofs = TowerProofs::new(prod_specs.len(), logup_specs.len());
         let log_num_fanin = ceil_log2(num_fanin);
         // -1 for sliding windows size 2: (cur_layer, next_layer) w.r.t total size
@@ -1296,6 +1320,7 @@ impl TowerProver {
                 let r_merge = (0..log_num_fanin)
                     .map(|_| transcript.get_and_append_challenge(b"merge").elements)
                     .collect_vec();
+                println!("sumcheck point len: {}", sumcheck_proofs.point.len());
                 let rt_prime = [sumcheck_proofs.point, r_merge].concat();
 
                 // generate next round challenge
