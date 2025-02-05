@@ -1197,28 +1197,20 @@ impl TowerProver {
         // TODO mayber give a better naming?
         assert_eq!(num_fanin, 2);
 
-        println!("prod_specs dimensions: {}", prod_specs.len());
-        for (i, spec) in prod_specs.iter().enumerate() {
-            for (j, witnesses) in spec.witness.iter().enumerate() {
-                for (k, witness) in witnesses.iter().enumerate() {
-                    println!(
-                        "prod_specs[{i}].witnesses[{j}][{k}] mle length: {}",
-                        witness.evaluations().len()
-                    );
-                }
-            }
+        if !prod_specs.is_empty() {
+            println!(
+                "prod_specs dimensions: {}; sub_dim: {:?}",
+                prod_specs.len(),
+                prod_specs[0]
+            );
         }
 
-        println!("logup_specs dimensions: {}", logup_specs.len());
-        for (i, spec) in logup_specs.iter().enumerate() {
-            for (j, witnesses) in spec.witness.iter().enumerate() {
-                for (k, witness) in witnesses.iter().enumerate() {
-                    println!(
-                        "logup_specs[{i}].witness[{j}][{k}] mle length: {}",
-                        witness.evaluations().len()
-                    );
-                }
-            }
+        if !logup_specs.is_empty() {
+            println!(
+                "logup_specs dimensions: {}; sub_dim: {:?}",
+                logup_specs.len(),
+                logup_specs[0]
+            );
         }
 
         let mut proofs = TowerProofs::new(prod_specs.len(), logup_specs.len());
@@ -1320,7 +1312,7 @@ impl TowerProver {
                 let r_merge = (0..log_num_fanin)
                     .map(|_| transcript.get_and_append_challenge(b"merge").elements)
                     .collect_vec();
-                println!("sumcheck point len: {}", sumcheck_proofs.point.len());
+                //println!("sumcheck point len: {}", sumcheck_proofs.point.len());
                 let rt_prime = [sumcheck_proofs.point, r_merge].concat();
 
                 // generate next round challenge
@@ -1358,6 +1350,7 @@ impl TowerProver {
                 (rt_prime, next_alpha_pows)
             });
 
+        proofs.debug();
         (next_rt, proofs)
     }
 }

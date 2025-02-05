@@ -36,8 +36,69 @@ pub struct TowerProofs<E: ExtensionField> {
     pub logup_specs_points: Vec<Vec<Point<E>>>,
 }
 
+fn get_dims<F>(v: &[Vec<Vec<F>>]) {
+    let zs = v
+        .iter()
+        .flat_map(|x| x.iter().map(|y| y.len()))
+        .unique()
+        .collect::<Vec<_>>();
+    let x = v.len();
+    let y = v.first().map(|z| z.len()).unwrap_or(0);
+    println!("  {x}x{y}x{}", zs.first().cloned().unwrap_or(0));
+}
+
+fn get_dims_prover_message<E: ExtensionField>(v: &[Vec<IOPProverMessage<E>>]) {
+    let zs = v
+        .iter()
+        .flat_map(|x| x.iter().map(|y| y.evaluations.len()))
+        .unique()
+        .collect::<Vec<_>>();
+    let x = v.len();
+    let y = v.first().map(|z| z.len()).unwrap_or(0);
+    println!("  {x}x{y}x{}", zs.first().cloned().unwrap_or(0));
+}
+
+// note that for the outermost dimension, x, x[0] is length 0 + 1
+// x[1] is length 2
+// x[2] is length 3, etc
+// the 3d dimension appears to always be the same length
+impl<E: ExtensionField> TowerProofs<E> {
+    pub fn debug(&self) {
+        println!("TowerProofs:");
+        println!("proofs:");
+        get_dims_prover_message(&self.proofs);
+        println!("prod_specs_eval");
+        get_dims(&self.prod_specs_eval);
+        println!("logup_specs_eval");
+        get_dims(&self.logup_specs_eval);
+    }
+}
 pub struct TowerProverSpec<'a, E: ExtensionField> {
     pub witness: Vec<Vec<ArcMultilinearExtension<'a, E>>>,
+}
+
+impl<'a, E: ExtensionField> std::fmt::Debug for TowerProverSpec<'a, E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x = self.witness.len();
+        let ys = self
+            .witness
+            .iter()
+            .map(|y| y.len())
+            .unique()
+            .collect::<Vec<_>>();
+        let ms = self
+            .witness
+            .iter()
+            .flat_map(|y| y.iter().map(|z| 1 << z.num_vars()))
+            .unique()
+            .collect::<Vec<_>>();
+        assert_eq!(ys.len(), 1);
+        let ms = ms.iter().map(|m| m.to_string()).join(", ");
+
+        f.debug_struct("TowerProverSpec")
+            .field("witness", &format!("{}x{}x {}", x, ys[0], ms))
+            .finish()
+    }
 }
 
 pub type WitnessId = u16;
