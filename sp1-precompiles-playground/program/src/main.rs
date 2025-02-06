@@ -19,6 +19,8 @@ use sp1_zkvm::syscalls::{
     syscall_sha256_extend,
 };
 
+use ::substrate_bn::{Fr, Group, G1};
+
 /// One unit test for each implemented syscall
 /// Meant to be used identically in a sp1 guest to confirm compatibility
 pub fn test_syscalls() {
@@ -178,6 +180,55 @@ pub fn test_syscalls() {
         syscall_bn254_add(&mut a, &mut b);
         println!("{:?}", a);
         println!("{:?}", b);
+    }
+
+    {
+        fn bytes_to_words2(bytes: [u8; 64]) -> [u32; 16] {
+            let mut bytes = bytes.clone();
+            // Reverse the order of bytes for each coordinate
+            bytes[0..32].reverse();
+            bytes[32..].reverse();
+            std::array::from_fn(|i| {
+                u32::from_le_bytes(bytes[4 * i..4 * (i + 1)].try_into().unwrap())
+            })
+        }
+
+        {
+            let a = G1::one() * Fr::from_str("237").unwrap();
+            let b = G1::one() * Fr::from_str("450").unwrap();
+
+            let mut a_x_bytes = [0u8; 32];
+            a.x().to_big_endian(&mut a_x_bytes);
+            let mut a_y_bytes = [0u8; 32];
+            a.y().to_big_endian(&mut a_y_bytes);
+
+            let mut b_x_bytes = [0u8; 32];
+            b.x().to_big_endian(&mut b_x_bytes);
+
+            let mut b_y_bytes = [0u8; 32];
+            b.y().to_big_endian(&mut b_y_bytes);
+
+            let mut a_bytes = [0u8; 64];
+            a_bytes[..32].copy_from_slice(&a_x_bytes);
+            a_bytes[32..].copy_from_slice(&a_y_bytes);
+
+            let mut b_bytes = [0u8; 64];
+            b_bytes[..32].copy_from_slice(&b_x_bytes);
+            b_bytes[32..].copy_from_slice(&b_y_bytes);
+            let mut a = bytes_to_words2(a_bytes);
+            let mut b = bytes_to_words2(b_bytes);
+
+            syscall_bn254_add(&mut a, &mut b);
+            assert_eq!(
+                a,
+                [
+                    3135656477, 2515632576, 596954331, 3567847859, 372610666, 3476232260,
+                    1405908100, 68779581, 2592818518, 2818762017, 1040723445, 339451835,
+                    3517384025, 3021535436, 3711911221, 152609019
+                ]
+            );
+            println!("{:?}", a);
+        }
     }
 }
 
