@@ -19,7 +19,7 @@ use sp1_zkvm::syscalls::{
     syscall_sha256_extend,
 };
 
-use ::substrate_bn::{Fr, Group, G1};
+use ::substrate_bn::{AffineG1, Fr, Group, G1};
 
 /// One unit test for each implemented syscall
 /// Meant to be used identically in a sp1 guest to confirm compatibility
@@ -178,12 +178,12 @@ pub fn test_syscalls() {
         a[6] = 7;
         let mut b = [1u32; 16];
         syscall_bn254_add(&mut a, &mut b);
-        println!("{:?}", a);
-        println!("{:?}", b);
+        //println!("{:?}", a);
+        //println!("{:?}", b);
     }
 
     {
-        fn bytes_to_words2(bytes: [u8; 64]) -> [u32; 16] {
+        fn bytes_to_words(bytes: [u8; 64]) -> [u32; 16] {
             let mut bytes = bytes.clone();
             // Reverse the order of bytes for each coordinate
             bytes[0..32].reverse();
@@ -192,42 +192,41 @@ pub fn test_syscalls() {
                 u32::from_le_bytes(bytes[4 * i..4 * (i + 1)].try_into().unwrap())
             })
         }
-
+        fn g1_to_words(elem: G1) -> [u32; 16] {
+            // TODO: ?
+            let elem = AffineG1::from_jacobian(elem).unwrap();
+            let mut x_bytes = [0u8; 32];
+            elem.x().to_big_endian(&mut x_bytes).unwrap();
+            let mut y_bytes = [0u8; 32];
+            elem.y().to_big_endian(&mut y_bytes).unwrap();
+            let mut bytes = [0u8; 64];
+            bytes[..32].copy_from_slice(&x_bytes);
+            bytes[32..].copy_from_slice(&y_bytes);
+            bytes_to_words(bytes)
+        }
         {
             let a = G1::one() * Fr::from_str("237").unwrap();
             let b = G1::one() * Fr::from_str("450").unwrap();
-
-            let mut a_x_bytes = [0u8; 32];
-            a.x().to_big_endian(&mut a_x_bytes);
-            let mut a_y_bytes = [0u8; 32];
-            a.y().to_big_endian(&mut a_y_bytes);
-
-            let mut b_x_bytes = [0u8; 32];
-            b.x().to_big_endian(&mut b_x_bytes);
-
-            let mut b_y_bytes = [0u8; 32];
-            b.y().to_big_endian(&mut b_y_bytes);
-
-            let mut a_bytes = [0u8; 64];
-            a_bytes[..32].copy_from_slice(&a_x_bytes);
-            a_bytes[32..].copy_from_slice(&a_y_bytes);
-
-            let mut b_bytes = [0u8; 64];
-            b_bytes[..32].copy_from_slice(&b_x_bytes);
-            b_bytes[32..].copy_from_slice(&b_y_bytes);
-            let mut a = bytes_to_words2(a_bytes);
-            let mut b = bytes_to_words2(b_bytes);
-
+            let d = G1::one() * Fr::from_str("687").unwrap();
+            let mut a = g1_to_words(a);
+            let mut b = g1_to_words(b);
+            let mut d = g1_to_words(d);
             syscall_bn254_add(&mut a, &mut b);
+            assert_eq!(a, d);
+            
+            println!("d: {:?}", d);
             assert_eq!(
                 a,
-                [
-                    3135656477, 2515632576, 596954331, 3567847859, 372610666, 3476232260,
-                    1405908100, 68779581, 2592818518, 2818762017, 1040723445, 339451835,
-                    3517384025, 3021535436, 3711911221, 152609019
-                ]
+[3533671058, 384027398, 1667527989, 405931240, 1244739547, 3008185164, 3438692308, 533547881, 4111479971, 1966599592, 1118334819, 3045025257, 3188923637, 1210932908, 947531184, 656119894]
+
             );
-            println!("{:?}", a);
+
+            let c = G1::one() * Fr::from_str("343").unwrap();
+            let mut c = g1_to_words(c);
+            syscall_bn254_double(&mut c);
+            let one = g1_to_words(G1::one());
+            syscall_bn254_add(&mut c, &one);
+            assert_eq!(a, c);
         }
     }
 }
