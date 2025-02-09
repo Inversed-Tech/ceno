@@ -122,6 +122,7 @@ fn main() {
 
     tracing::info!("Loading hints file: {:?}", args.hints);
     let hints = memory_from_file(&args.hints);
+    dbg!(&hints);
     assert!(
         hints.len() <= platform.hints.iter_addresses().len(),
         "hints must fit in {} bytes",
