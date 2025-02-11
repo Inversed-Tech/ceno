@@ -14,7 +14,6 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(42); // Fixed seed for reproducibility
     let mut scratch: Vec<u32> = (0..n).map(|_| rng.gen()).collect();
     scratch.sort();
-    // Print any output you feel like, eg the first element of the sorted vector:
 
     // Note: prints make proving fail
     // println!("{}", scratch[0]);
