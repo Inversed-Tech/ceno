@@ -353,6 +353,7 @@ dependencies = [
  "base64",
  "bincode",
  "ceno_emul",
+ "ceno_host",
  "cfg-if",
  "clap",
  "criterion",
@@ -743,6 +744,7 @@ name = "examples"
 version = "0.1.0"
 dependencies = [
  "ceno_rt",
+ "rand",
  "rkyv",
 ]
 

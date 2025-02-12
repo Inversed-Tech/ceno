@@ -48,6 +48,7 @@ pub struct RowMajorMatrix<T: Sized + Sync + Clone + Send + Copy> {
 
 impl<T: Sized + Sync + Clone + Send + Copy + Default + From<u64>> RowMajorMatrix<T> {
     pub fn new(num_rows: usize, num_col: usize, padding_strategy: InstancePaddingStrategy) -> Self {
+        dbg!((num_rows, num_col));
         RowMajorMatrix {
             values: (0..num_rows * num_col)
                 .into_par_iter()
