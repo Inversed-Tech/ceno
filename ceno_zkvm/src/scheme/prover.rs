@@ -387,14 +387,14 @@ impl<E: ExtensionField, PCS: PolynomialCommitmentScheme<E>> ZKVMProver<E, PCS> {
         let (rt_tower, tower_proof) = TowerProver::create_proof(
             vec![
                 TowerProverSpec {
-                    witness: r_wit_layers,
+                    witness: r_wit_layers, // read
                 },
                 TowerProverSpec {
-                    witness: w_wit_layers,
+                    witness: w_wit_layers, // write
                 },
             ],
             vec![TowerProverSpec {
-                witness: lk_wit_layers,
+                witness: lk_wit_layers, // lookup table for various operations, like &, etc
             }],
             NUM_FANIN,
             transcript,
