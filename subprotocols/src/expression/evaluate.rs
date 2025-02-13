@@ -159,6 +159,7 @@ impl Expression {
             size,
             degree,
         );
+        // Mihai: Exactly the encoding of poly sent by prover in a round of sumcheck?
         op_by_type!(UniPolyVectorType, poly, |poly| {
             poly.into_iter().fold(vec![E::ZERO; degree], |acc, x| {
                 zip_eq(acc, x).map(|(a, b)| a + b).collect_vec()
@@ -418,6 +419,13 @@ impl Witness {
 }
 
 /// Compute the univariate polynomial evaluated on 1..degree.
+///
+/// Mihai: my understanding
+/// ret[i][j] = mle(i'th bitmask of length (num_var - 1), j + 1)
+/// So for example for num_vars = 5 we have ret[10][6] = poly(1, 0, 1, 0, 6)
+///
+/// Probably encodes the univariate polynomials sent by the prover in each sumcheck round.
+/// (in evaluation form)
 #[inline]
 fn uni_poly_helper<F: Field>(mle: &[F], size: usize, degree: usize) -> Vec<Vec<F>> {
     mle.chunks(2)
@@ -442,6 +450,7 @@ mod test {
 
     #[test]
     fn test_uni_poly_helper() {
+        // Mihai: TODO what's this?
         // (x + 2), (3x + 4), (5x + 6), (7x + 8)
         let mle = field_vec![F, 2, 3, 4, 7, 6, 11, 8, 15, 11, 13, 17, 19, 23, 29, 31, 37];
         let size = 8;

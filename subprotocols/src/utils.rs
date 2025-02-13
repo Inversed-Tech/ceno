@@ -53,6 +53,8 @@ pub fn eq<F: PrimeField>(x: &F, y: &F) -> F {
     xy + xy - x - y + F::ONE
 }
 
+// Mihai: Here r is value of the last variable Xn. buf[i = 0..1] -> sum of config with Xn = i
+// buf[0] not affected by r, buf[1] affected by r with weight = (buf[1] - buf[0])
 pub fn fix_variables_ext<E: ExtensionField>(base_mle: &[E::BaseField], r: &E) -> Vec<E> {
     base_mle
         .par_iter()
@@ -62,6 +64,7 @@ pub fn fix_variables_ext<E: ExtensionField>(base_mle: &[E::BaseField], r: &E) ->
         .collect()
 }
 
+// Mihai: Same as above but assign result to first half of ext_mle
 pub fn fix_variables_inplace<E: ExtensionField>(ext_mle: &mut [E], r: &E) {
     ext_mle
         .par_iter_mut()
@@ -75,6 +78,7 @@ pub fn fix_variables_inplace<E: ExtensionField>(ext_mle: &mut [E], r: &E) {
     }
 }
 
+// Mihai: this could use an assert that point[].len() == number of variables
 pub fn evaluate_mle_inplace<E: ExtensionField>(mle: &mut [E], point: &[E]) -> E {
     for r in point {
         fix_variables_inplace(mle, r);

@@ -26,6 +26,8 @@ where
     /// Extension field mles.
     ext_mles: Vec<&'a mut [E]>,
     /// Base field mles after the first round.
+    /// Mihai: is this distinction necessary just because
+    /// completely unevaluated type is BaseField and partially evaluated is ExtField?
     base_mles_after: Vec<Vec<E>>,
     /// Base field mles.
     base_mles: Vec<&'a [E::BaseField]>,
