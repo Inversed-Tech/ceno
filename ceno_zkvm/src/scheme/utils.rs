@@ -202,6 +202,20 @@ pub(crate) fn infer_tower_product_witness<E: ExtensionField>(
     last_layer: Vec<ArcMultilinearExtension<'_, E>>,
     num_product_fanin: usize,
 ) -> Vec<Vec<ArcMultilinearExtension<'_, E>>> {
+    // last_layer: [A, B]
+    // fanin = 2
+    // num_vars = 10
+    // length of A and B is 1 << 10 = 1024
+    //
+    // for 0..9 --> num layers
+    // for last layer
+    // clone the previous layer
+    // cur_len = 512
+    // cur_layer = [A', B']
+    // solve for A'
+    // A: [al, ah]
+    // B: [bl, bh]
+    // A' = al dot bl
     assert!(last_layer.len() == num_product_fanin);
     let log2_num_product_fanin = ceil_log2(num_product_fanin);
     let mut wit_layers =
@@ -214,18 +228,17 @@ pub(crate) fn infer_tower_product_witness<E: ExtensionField>(
                     next_layer.iter().for_each(|f| match f.evaluations() {
                         FieldType::Ext(f) => {
                             let start: usize = index * cur_len;
-                            f[start..][..cur_len]
-                                .par_iter()
-                                .zip(evaluations.par_iter_mut())
-                                .with_min_len(MIN_PAR_SIZE)
-                                .map(|(v, evaluations)| *evaluations *= *v)
-                                .collect()
+                            for (v, evaluation) in
+                                f[start..][..cur_len].iter().zip(evaluations.iter_mut())
+                            {
+                                *evaluation *= *v;
+                            }
                         }
                         _ => unreachable!("must be extension field"),
                     });
                     evaluations.into_mle().into()
                 })
-                .collect_vec();
+                .collect();
             acc.push(cur_layer);
             acc
         });

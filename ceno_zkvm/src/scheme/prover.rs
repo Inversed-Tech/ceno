@@ -297,6 +297,7 @@ impl<E: ExtensionField, PCS: PolynomialCommitmentScheme<E>> ZKVMProver<E, PCS> {
         // as last layer is the output of sel stage
         let span = entered_span!("tower_witness_r_last_layer");
         // TODO optimize last layer to avoid alloc new vector to save memory
+        println!("r_records_wit length: {}", r_records_wit.len());
         let r_records_last_layer =
             interleaving_mles_to_mles(r_records_wit, num_instances, NUM_FANIN, E::ONE);
         assert_eq!(r_records_last_layer.len(), NUM_FANIN);
@@ -821,6 +822,7 @@ impl<E: ExtensionField, PCS: PolynomialCommitmentScheme<E>> ZKVMProver<E, PCS> {
         exit_span!(span);
 
         let span = entered_span!("tower_witness_lk_layers");
+        println!("r_set_last_layer length: {}", r_set_last_layer.len());
         let r_wit_layers = r_set_last_layer
             .into_iter()
             .zip(r_set_wit.iter())
