@@ -71,3 +71,7 @@ name = "fibonacci"
 [[bench]]
 harness = false
 name = "fibonacci_witness"
+
+[[bench]]
+name = "tower_witness"
+harness = false
