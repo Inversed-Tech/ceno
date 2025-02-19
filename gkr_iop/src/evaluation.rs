@@ -63,6 +63,7 @@ impl EvalExpression {
                     new_point.insert(*index_in_point, c.evaluate(challenges));
                 }
 
+                // dbg!(&vars);
                 let eq = build_eq_x_r_vec_sequential(&vars);
                 let eval = izip!(parts, &eq).fold(E::ZERO, |acc, (part, eq)| acc + part.eval * eq);
 

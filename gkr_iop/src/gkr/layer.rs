@@ -90,6 +90,14 @@ impl Layer {
         #[allow(unused)]
         let (sigmas, out_points) = self.sigmas_and_points(claims, challenges);
 
+        // dbg!(&sigmas);
+        // dbg!(&out_points);
+
+        // dbg!(&self);
+        // dbg!(&wit);
+        // dbg!(&challenges);
+        // dbg!("#############");
+
         let SumcheckProverOutput {
             point: in_point,
             proof,
@@ -168,6 +176,7 @@ impl Layer {
         Ok(())
     }
 
+    // Mihai: sigmas derived from outs
     fn sigmas_and_points<E: ExtensionField>(
         &self,
         claims: &[PointAndEval<E>],
@@ -176,7 +185,13 @@ impl Layer {
         self.outs
             .iter()
             .map(|out| {
+                if self.name == "Tower_layer_2" {
+                    // dbg!(&out);
+                }
                 let tmp = out.evaluate(claims, challenges);
+                if self.name == "Tower_layer_2" {
+                    // dbg!(&tmp);
+                }
                 (tmp.eval, tmp.point)
             })
             .unzip()

@@ -19,6 +19,7 @@ use super::{
     },
 };
 
+// Mihai: so this is many zerochecks
 /// This is an randomly combined zerocheck protocol for the following equation:
 /// \sigma = \sum_x (r^0 eq_0(X) \cdot expr_0(x) + r^1 eq_1(X) \cdot expr_1(x) + ...)
 pub struct ZerocheckProverState<'a, E, Trans>
@@ -66,6 +67,9 @@ where
         } else {
             log2(base_mles[0].len()) as usize
         };
+
+        // dbg!(&num_vars);
+        // dbg!(&base_mles[0].len());
 
         // For each point, compute eq(point[1..], b) for b in [0, 2^{num_vars - 1}).
         let (exprs, grand_prod_of_not_inv) = if num_vars > 0 {

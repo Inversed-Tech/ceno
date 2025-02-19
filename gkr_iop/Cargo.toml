@@ -9,6 +9,8 @@ readme.workspace = true
 repository.workspace = true
 version.workspace = true
 
+exclude = ["examples/keccak_f.rs"]
+
 [dependencies]
 ark-std.workspace = true
 ff.workspace = true

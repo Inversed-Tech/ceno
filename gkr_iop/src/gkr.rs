@@ -58,10 +58,17 @@ impl GKRCircuit<'_> {
         let mut challenges = challenges.to_vec();
         let sumcheck_proofs = izip!(self.layers, circuit_wit.layers)
             .map(|(layer, layer_wit)| {
+                // dbg!(
+                //     &evaluations.len(),
+                //     &evaluations.iter().map(|e| e.point.len()).collect_vec()
+                // );
+                // dbg!(&challenges);
                 layer.prove(layer_wit, &mut evaluations, &mut challenges, transcript)
             })
             .collect_vec();
 
+        // dbg!(&challenges);
+        // dbg!(&evaluations);
         let opening_evaluations = self.opening_evaluations(&evaluations, &challenges);
 
         Ok(GKRProverOutput {

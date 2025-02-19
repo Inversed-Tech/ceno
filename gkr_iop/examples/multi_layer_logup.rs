@@ -96,6 +96,20 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
                         num_1.1.clone(),
                     ])
                 };
+
+                // dbg!(
+                //     i,
+                //     &den_expr_0,
+                //     &den_expr_1,
+                //     &num_expr_0,
+                //     &num_expr_1,
+                //     &challenges,
+                //     &in_bases,
+                //     &in_exts,
+                //     &den,
+                //     &num
+                // );
+
                 chip.add_layer(Layer::new(
                     format!("Tower_layer_{}", i),
                     LayerType::Zerocheck,
@@ -127,6 +141,9 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
 
         // Preprocessing layer, compute table + challenge
         let ([table], []) = chip.allocate_wits_in_layer();
+
+        dbg!(&updated_table);
+        dbg!(&table);
 
         chip.add_layer(Layer::new(
             "Update_table".to_string(),
@@ -253,6 +270,7 @@ fn main() {
 
         let out_evals = {
             let last = gkr_witness.layers[0].exts.clone();
+            // Mihai: What is point here? Why is it empty?
             let point = Arc::new(vec![]);
             assert_eq!(last[0].len(), 1);
             vec![

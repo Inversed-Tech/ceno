@@ -400,7 +400,6 @@ mod test {
             E, 2, 5
         ]];
         let point_refs = points.iter().map(|v| v.as_slice()).collect_vec();
-
         let eqs = eq_vecs(point_refs.clone().into_iter(), &vec![E::ONE; points.len()]);
 
         let d0 = field_vec![F, 1, 2, 3, 4];
