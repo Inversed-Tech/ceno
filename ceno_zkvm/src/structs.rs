@@ -37,6 +37,14 @@ pub struct TowerProofs<E: ExtensionField> {
 }
 
 fn get_dims<F>(v: &[Vec<Vec<F>>]) {
+    // println!("  v len: {}", v.len());
+    // for (idx, e) in v.iter().enumerate() {
+    // println!("      idx: {idx}, len: {}", e.len());
+    // for m in e.iter() {
+    // println!("          msg len: {}", m.len());
+    // }
+    // }
+    // return;
     let zs = v
         .iter()
         .flat_map(|x| x.iter().map(|y| y.len()))
@@ -48,14 +56,28 @@ fn get_dims<F>(v: &[Vec<Vec<F>>]) {
 }
 
 fn get_dims_prover_message<E: ExtensionField>(v: &[Vec<IOPProverMessage<E>>]) {
+    // println!("v len: {}", v.len());
+    // for (idx, e) in v.iter().enumerate() {
+    // println!("  idx: {idx}, len: {}", e.len());
+    // for m in e.iter() {
+    // println!("      msg len: {}", m.evaluations.len());
+    // }
+    // }
+    // return;
     let zs = v
         .iter()
         .flat_map(|x| x.iter().map(|y| y.evaluations.len()))
         .unique()
         .collect::<Vec<_>>();
     let x = v.len();
-    let y = v.first().map(|z| z.len()).unwrap_or(0);
-    println!("  {x}x{y}x{}", zs.first().cloned().unwrap_or(0));
+
+    println!(
+        "  {}x{}..{}x{}",
+        x,
+        1,
+        x + 1,
+        zs.first().cloned().unwrap_or(0)
+    );
 }
 
 // note that for the outermost dimension, x, x[0] is length 0 + 1
