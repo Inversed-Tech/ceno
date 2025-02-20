@@ -197,7 +197,7 @@ pub fn infer_tower_logup_witness<'a, E: ExtensionField>(
 }
 
 /// infer tower witness from last layer
-pub(crate) fn infer_tower_product_witness<E: ExtensionField>(
+pub fn infer_tower_product_witness<E: ExtensionField>(
     num_vars: usize,
     last_layer: Vec<ArcMultilinearExtension<'_, E>>,
     num_product_fanin: usize,
@@ -228,17 +228,18 @@ pub(crate) fn infer_tower_product_witness<E: ExtensionField>(
                     next_layer.iter().for_each(|f| match f.evaluations() {
                         FieldType::Ext(f) => {
                             let start: usize = index * cur_len;
-                            for (v, evaluation) in
-                                f[start..][..cur_len].iter().zip(evaluations.iter_mut())
-                            {
-                                *evaluation *= *v;
-                            }
+                            f[start..][..cur_len]
+                                .par_iter()
+                                .zip(evaluations.par_iter_mut())
+                                .with_min_len(MIN_PAR_SIZE)
+                                .map(|(v, evaluations)| *evaluations *= *v)
+                                .collect()
                         }
                         _ => unreachable!("must be extension field"),
                     });
                     evaluations.into_mle().into()
                 })
-                .collect();
+                .collect_vec();
             acc.push(cur_layer);
             acc
         });

@@ -2,7 +2,7 @@ use criterion::*;
 use goldilocks::GoldilocksExt2;
 use rand::RngCore;
 
-use ceno_zkvm::scheme::utils::infer_tower_logup_witness;
+use ceno_zkvm::scheme::utils::{infer_tower_logup_witness, infer_tower_product_witness};
 
 use multilinear_extensions::{mle::IntoMLE, virtual_poly::ArcMultilinearExtension};
 
@@ -30,6 +30,15 @@ fn build_tower(c: &mut Criterion) {
             |b| {
                 b.iter(|| {
                     infer_tower_logup_witness(Some(p.clone()), q.clone());
+                })
+            },
+        );
+
+        group.bench_function(
+            BenchmarkId::new("build_product_tower", format!("nv_{}", nv)),
+            |b| {
+                b.iter(|| {
+                    infer_tower_product_witness(nv, p.clone(), 2);
                 })
             },
         );
