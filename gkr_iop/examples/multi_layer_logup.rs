@@ -14,6 +14,7 @@ use goldilocks::GoldilocksExt2;
 use itertools::{Itertools, izip};
 use rand::{Rng, rngs::OsRng};
 use subprotocols::expression::{Constant, Expression};
+
 use transcript::{BasicTranscript, Transcript};
 
 #[cfg(debug_assertions)]

@@ -827,6 +827,7 @@ name = "gkr_iop"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+ "criterion",
  "ff",
  "ff_ext",
  "goldilocks",
@@ -836,6 +837,7 @@ dependencies = [
  "rayon",
  "subprotocols",
  "thiserror 2.0.8",
+ "tiny-keccak",
  "transcript",
 ]
 
