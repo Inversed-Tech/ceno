@@ -15,6 +15,7 @@ use p3_field::{extension::BinomialExtensionField, PrimeCharacteristicRing};
 use p3_goldilocks::Goldilocks;
 use rand::{rngs::OsRng, Rng};
 use subprotocols::expression::{Constant, Expression};
+
 use transcript::{BasicTranscript, Transcript};
 
 #[cfg(debug_assertions)]

@@ -1173,6 +1173,7 @@ version = "0.1.0"
 dependencies = [
  "ark-std",
 <<<<<<< HEAD
+<<<<<<< HEAD
  "ff_ext",
  "itertools 0.13.0",
  "multilinear_extensions",
@@ -1183,6 +1184,9 @@ dependencies = [
  "subprotocols",
  "thiserror 1.0.69",
 =======
+=======
+ "criterion",
+>>>>>>> d28427cc (full keccakf)
  "ff",
  "ff_ext",
  "goldilocks",
@@ -1192,7 +1196,11 @@ dependencies = [
  "rayon",
  "subprotocols",
  "thiserror 2.0.8",
+<<<<<<< HEAD
 >>>>>>> c49671de (Add comments and fix some tiny bugs)
+=======
+ "tiny-keccak",
+>>>>>>> d28427cc (full keccakf)
  "transcript",
 ]
 

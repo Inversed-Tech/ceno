@@ -9,6 +9,7 @@ pub mod chip;
 pub mod error;
 pub mod evaluation;
 pub mod gkr;
+pub mod precompiles;
 pub mod utils;
 
 pub trait ProtocolBuilder: Sized {
