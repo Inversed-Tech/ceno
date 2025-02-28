@@ -336,6 +336,8 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
 
                 let (d_and_state, _) = chip.allocate_wits_in_layer::<{ D_SIZE + STATE_SIZE }, 0>();
                 let (d, state) = d_and_state.split_at(D_SIZE);
+                let state = state.to_vec();
+                let state_wits = state.iter().map(|e| e.0).collect_vec();
 
                 // Compute post-theta state using original state and D[][] values
                 let exprs = (0..STATE_SIZE)
@@ -357,43 +359,32 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     // pi_output.to_vec(),
                 ));
 
-                let (c_and_state, []) = chip.allocate_wits_in_layer::<{ C_SIZE + STATE_SIZE }, 0>();
-                let (c, state) = c_and_state.split_at(C_SIZE);
+                let (c, []) = chip.allocate_wits_in_layer::<{ C_SIZE }, 0>();
 
-                let c_wits = c.into_iter().map(|e| e.0).collect_vec();
-                let state_wits = state.into_iter().map(|e| e.0).collect_vec();
+                let c_wits = c.clone().into_iter().map(|e| e.0).collect_vec();
 
                 // Compute D[][] from C[][] values
                 let d_exprs = iproduct!(0..5usize, 0..64usize)
                     .map(|(x, z)| d_expr(x, z, &c_wits))
                     .collect_vec();
 
-                // Copy state
-                let id_exprs: Vec<Expression> =
-                    (0..STATE_SIZE).map(|i| state_wits[i].into()).collect_vec();
-
                 chip.add_layer(Layer::new(
                     "compute_D[x][z]".to_string(),
                     LayerType::Zerocheck,
-                    chain!(d_exprs, id_exprs).collect_vec(),
+                    d_exprs,
                     // vec![challenge1, challenge2],
                     vec![],
-                    c_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    c.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
-                    d_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    d.iter().map(|e| e.1.clone()).collect_vec(),
                 ));
-
-                let (state, []) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
-                let state_wits = state.iter().map(|s| s.0).collect_vec();
 
                 // Compute C[][] from state
                 let c_exprs = iproduct!(0..5usize, 0..64usize)
                     .map(|(x, z)| c_expr(x, z, &state_wits))
                     .collect_vec();
 
-                // Copy state
-                let id_exprs: Vec<Expression> =
-                    (0..STATE_SIZE).map(|i| state_wits[i].into()).collect_vec();
+                let id_exprs = (0..STATE_SIZE).map(|i| state[i].0.into()).collect_vec();
 
                 chip.add_layer(Layer::new(
                     "compute_C[x][z]".to_string(),
@@ -403,10 +394,19 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     vec![],
                     state.iter().map(|t| t.1.clone()).collect_vec(),
                     vec![],
-                    c_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    chain!(
+                        c.iter().map(|e| e.1.clone()).collect_vec(),
+                        state.clone().into_iter().map(|e| e.1.clone()).collect_vec()
+                    )
+                    .collect_vec(),
                 ));
 
-                state.map(|e| e.1.clone())
+                state
+                    .into_iter()
+                    .map(|e| e.1.clone())
+                    .collect_vec()
+                    .try_into()
+                    .unwrap()
             });
 
         // dbg!(chip.layers.len());
@@ -453,11 +453,7 @@ where
                 .collect_vec();
 
             layer_wits.push(LayerWitness::new(
-                chain!(
-                    c_wits.clone().into_iter().map(|b| vec![b]),
-                    bits.clone().into_iter().map(|b| vec![b])
-                )
-                .collect_vec(),
+                c_wits.clone().into_iter().map(|b| vec![b]).collect_vec(),
                 vec![],
             ));
 
