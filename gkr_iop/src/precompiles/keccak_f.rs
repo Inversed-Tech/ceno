@@ -280,7 +280,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
         (0..ROUNDS)
             .rev()
             .into_iter()
-            .fold(final_output, |acc, round| {
+            .fold(final_output, |round_output, round| {
                 let (chi_output, _) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
 
                 let exprs = (0..STATE_SIZE)
@@ -295,7 +295,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     vec![],
                     chi_output.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
-                    acc.to_vec(),
+                    round_output.to_vec(),
                 ));
 
                 let (pi_output, _) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
@@ -335,15 +335,14 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                 ));
 
                 let (d_and_state, _) = chip.allocate_wits_in_layer::<{ D_SIZE + STATE_SIZE }, 0>();
-                let (d, state) = d_and_state.split_at(D_SIZE);
-                let state = state.to_vec();
-                let state_wits = state.iter().map(|e| e.0).collect_vec();
+                let (d, state2) = d_and_state.split_at(D_SIZE);
+                let state2 = state2.to_vec();
 
                 // Compute post-theta state using original state and D[][] values
                 let exprs = (0..STATE_SIZE)
                     .map(|i| {
                         let (x, y, z) = to_xyz(i);
-                        xor_expr(state[i].0.into(), d[from_xz(x, z)].0.into())
+                        xor_expr(state2[i].0.into(), d[from_xz(x, z)].0.into())
                     })
                     .collect_vec();
 
@@ -379,12 +378,14 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     d.iter().map(|e| e.1.clone()).collect_vec(),
                 ));
 
+                let (state, []) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
+                let id_exprs = (0..STATE_SIZE).map(|i| state[i].0.into()).collect_vec();
+                let state_wits = state.iter().map(|e| e.0).collect_vec();
+
                 // Compute C[][] from state
                 let c_exprs = iproduct!(0..5usize, 0..64usize)
                     .map(|(x, z)| c_expr(x, z, &state_wits))
                     .collect_vec();
-
-                let id_exprs = (0..STATE_SIZE).map(|i| state[i].0.into()).collect_vec();
 
                 chip.add_layer(Layer::new(
                     "compute_C[x][z]".to_string(),
@@ -396,7 +397,11 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     vec![],
                     chain!(
                         c.iter().map(|e| e.1.clone()).collect_vec(),
-                        state.clone().into_iter().map(|e| e.1.clone()).collect_vec()
+                        state2
+                            .clone()
+                            .into_iter()
+                            .map(|e| e.1.clone())
+                            .collect_vec()
                     )
                     .collect_vec(),
                 ));
