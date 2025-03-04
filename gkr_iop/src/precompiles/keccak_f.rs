@@ -303,13 +303,13 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                 ));
 
                 let (d_and_state, _) = chip.allocate_wits_in_layer::<{ D_SIZE + STATE_SIZE }, 0>();
-                let (d, state) = d_and_state.split_at(D_SIZE);
+                let (d, state2) = d_and_state.split_at(D_SIZE);
 
                 // Compute post-theta state using original state and D[][] values
                 let exprs = (0..STATE_SIZE)
                     .map(|i| {
                         let (x, y, z) = to_xyz(i);
-                        xor_expr(state[i].0.into(), d[from_xz(x, z)].0.into())
+                        xor_expr(state2[i].0.into(), d[from_xz(x, z)].0.into())
                     })
                     .collect_vec();
 
@@ -323,29 +323,22 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     theta_output.iter().map(|e| e.1.clone()).collect_vec(),
                 ));
 
-                let (c_and_state, []) = chip.allocate_wits_in_layer::<{ C_SIZE + STATE_SIZE }, 0>();
-                let (c, state) = c_and_state.split_at(C_SIZE);
+                let (c, []) = chip.allocate_wits_in_layer::<{ C_SIZE }, 0>();
 
-                let c_wits = c.into_iter().map(|e| e.0).collect_vec();
-                let state_wits = state.into_iter().map(|e| e.0).collect_vec();
-
+                let c_wits = c.iter().map(|e| e.0.clone()).collect_vec();
                 // Compute D[][] from C[][] values
                 let d_exprs = iproduct!(0..5usize, 0..64usize)
                     .map(|(x, z)| d_expr(x, z, &c_wits))
                     .collect_vec();
 
-                // Copy state
-                let id_exprs: Vec<Expression> =
-                    (0..STATE_SIZE).map(|i| state_wits[i].into()).collect_vec();
-
                 chip.add_layer(Layer::new(
                     "compute_D[x][z]".to_string(),
                     LayerType::Zerocheck,
-                    chain!(d_exprs, id_exprs).collect_vec(),
+                    d_exprs,
                     vec![],
-                    c_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    c.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
-                    d_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    d.iter().map(|e| e.1.clone()).collect_vec(),
                 ));
 
                 let (state, []) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
@@ -367,13 +360,16 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     vec![],
                     state.iter().map(|t| t.1.clone()).collect_vec(),
                     vec![],
-                    c_and_state.iter().map(|e| e.1.clone()).collect_vec(),
+                    chain!(
+                        c.iter().map(|e| e.1.clone()),
+                        state2.iter().map(|e| e.1.clone())
+                    )
+                    .collect_vec(),
                 ));
 
                 state.map(|e| e.1.clone())
             });
 
-        dbg!(chip.layers.len());
         // Skip base opening allocation
     }
 }
@@ -419,7 +415,9 @@ where
             layer_wits.push(LayerWitness::new(
                 chain!(
                     c_wits.clone().into_iter().map(|b| vec![b]),
-                    bits.clone().into_iter().map(|b| vec![b])
+                    // Note: it seems test pass even if this is uncommented.
+                    // Maybe it's good to assert there are no unused witnesses
+                    // bits.clone().into_iter().map(|b| vec![b])
                 )
                 .collect_vec(),
                 vec![],
@@ -444,8 +442,7 @@ where
                 vec![],
             ));
 
-            bits = pi(&rho(&bits));
-            bits = chi(&bits);
+            bits = chi(&pi(&rho(&bits)));
             layer_wits.push(LayerWitness::new(
                 bits.clone().into_iter().map(|b| vec![b]).collect_vec(),
                 vec![],
