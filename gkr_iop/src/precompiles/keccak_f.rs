@@ -262,7 +262,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
         (0..ROUNDS)
             .rev()
             .into_iter()
-            .fold(final_output, |acc, round| {
+            .fold(final_output, |round_output, round| {
                 let (chi_output, _) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
 
                 let exprs = (0..STATE_SIZE)
@@ -270,13 +270,13 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     .collect_vec();
 
                 chip.add_layer(Layer::new(
-                    format!("post-iota {round}"),
+                    format!("Round {round}: Iota:: compute output"),
                     LayerType::Zerocheck,
                     exprs,
                     vec![],
                     chi_output.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
-                    acc.to_vec(),
+                    round_output.to_vec(),
                 ));
 
                 let (theta_output, _) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
@@ -293,7 +293,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     .collect_vec();
 
                 chip.add_layer(Layer::new(
-                    "compute theta-rho-pi-chi output".to_string(),
+                    format!("Round {round}: Chi:: apply rho, pi and chi"),
                     LayerType::Zerocheck,
                     exprs,
                     vec![],
@@ -314,7 +314,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     .collect_vec();
 
                 chip.add_layer(Layer::new(
-                    "compute theta output".to_string(),
+                    format!("Round {round}: Theta::compute output"),
                     LayerType::Zerocheck,
                     exprs,
                     vec![],
@@ -332,7 +332,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     .collect_vec();
 
                 chip.add_layer(Layer::new(
-                    "compute_D[x][z]".to_string(),
+                    format!("Round {round}: Theta::compute D[x][z]"),
                     LayerType::Zerocheck,
                     d_exprs,
                     vec![],
@@ -354,7 +354,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     (0..STATE_SIZE).map(|i| state_wits[i].into()).collect_vec();
 
                 chip.add_layer(Layer::new(
-                    "compute_C[x][z]".to_string(),
+                    format!("Round {round}: Theta::compute C[x][z]"),
                     LayerType::Zerocheck,
                     chain!(c_exprs, id_exprs).collect_vec(),
                     vec![],
@@ -375,7 +375,8 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
 }
 
 pub struct KeccakTrace {
-    pub bits: [bool; STATE_SIZE],
+    // pub bits: [bool; STATE_SIZE],
+    pub words: [u32; 2 * X * Y],
 }
 
 impl<E> ProtocolWitnessGenerator<E> for KeccakLayout<E>
@@ -387,7 +388,7 @@ where
     fn phase1_witness(&self, phase1: Self::Trace) -> Vec<Vec<E::BaseField>> {
         let mut res = vec![vec![]; 1];
         res[0] = phase1
-            .bits
+            .words
             .into_iter()
             .map(|b| E::BaseField::from(b as u64))
             .collect();
@@ -457,7 +458,10 @@ where
             }
         }
 
-        // dbg!(layer_wits.len());
+        // Assumes one input instance
+        let total_witness_size: usize = layer_wits.iter().map(|layer| layer.bases.len()).sum();
+        dbg!(total_witness_size);
+
         layer_wits.reverse();
 
         GKRCircuitWitness { layers: layer_wits }
@@ -504,15 +508,22 @@ fn rho_and_pi_permutation() -> Vec<usize> {
     pi(&rho(&perm))
 }
 
+fn u64s_to_u32s(state64: &[u64]) -> Vec<u32> {
+    state64
+        .iter()
+        .flat_map(|&word| vec![(word & 0xFFFFFFFF) as u32, (word >> 32) as u32])
+        .collect()
+}
+
 pub fn run_keccakf(state: [u64; 25], verify: bool, test: bool) -> () {
     let params = KeccakParams {};
     let (layout, chip) = KeccakLayout::build(params);
     let gkr_circuit = chip.gkr_circuit();
 
-    let bits = u64s_to_bools(&state);
+    let words = u64s_to_u32s(&state);
 
     let phase1_witness = layout.phase1_witness(KeccakTrace {
-        bits: bits.try_into().unwrap(),
+        words: words.try_into().unwrap(),
     });
     let mut prover_transcript = BasicTranscript::<E>::new(b"protocol");
 
