@@ -47,6 +47,28 @@ fn one_expr() -> Expression {
     Expression::Const(Constant::Base(1))
 }
 
+fn expansion_expr<const SIZE: usize>(expansion: &[(usize, Witness)]) -> Expression {
+    let (total, ret) = expansion.iter().fold((0, zero_expr()), |acc, (sz, felt)| {
+        (
+            acc.0 + sz,
+            acc.1 * Expression::Const(Constant::Base(1 << sz)) + felt.clone().into(),
+        )
+    });
+
+    assert_eq!(total, SIZE);
+    ret
+}
+
+// Constrains that lhs and rhs encode the same value of SIZE bits
+// WARNING: Assumes that forall i, (lhs[i].1 < (2 ^ lhs[i].0))
+// This needs to be constrained separately
+fn constrain_eq_expr<const SIZE: usize>(
+    lhs: &[(usize, Witness)],
+    rhs: &[(usize, Witness)],
+) -> Expression {
+    expansion_expr::<SIZE>(lhs) - expansion_expr::<SIZE>(rhs)
+}
+
 impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
     type Params = KeccakParams;
 
@@ -79,6 +101,15 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     acc + Expression::Const(Constant::Base(1 << i)) * bits[w_i * 32 + i].0.into()
                 });
                 Expression::from(words[w_i].0) - bit_expansion
+            })
+            .collect_vec();
+
+        let zero_checks_expansions = (0..50usize)
+            .into_iter()
+            .map(|i| {
+                let lhs = [(32, words[i].0)];
+                let rhs: [(usize, Witness); 32] = from_fn(|j| (1, bits[32 * i + 31 - j].0));
+                constrain_eq_expr::<32>(&lhs, &rhs)
             })
             .collect_vec();
 
