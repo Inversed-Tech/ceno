@@ -47,13 +47,20 @@ fn one_expr() -> Expression {
     Expression::Const(Constant::Base(1))
 }
 
+fn zero_eval() -> EvalExpression {
+    EvalExpression::Linear(0, Constant::Base(0), Constant::Base(0))
+}
+
 fn expansion_expr<const SIZE: usize>(expansion: &[(usize, Witness)]) -> Expression {
-    let (total, ret) = expansion.iter().fold((0, zero_expr()), |acc, (sz, felt)| {
-        (
-            acc.0 + sz,
-            acc.1 * Expression::Const(Constant::Base(1 << sz)) + felt.clone().into(),
-        )
-    });
+    let (total, ret) = expansion
+        .iter()
+        .rev()
+        .fold((0, zero_expr()), |acc, (sz, felt)| {
+            (
+                acc.0 + sz,
+                acc.1 * Expression::Const(Constant::Base(1 << sz)) + felt.clone().into(),
+            )
+        });
 
     assert_eq!(total, SIZE);
     ret
@@ -67,6 +74,59 @@ fn constrain_eq_expr<const SIZE: usize>(
     rhs: &[(usize, Witness)],
 ) -> Expression {
     expansion_expr::<SIZE>(lhs) - expansion_expr::<SIZE>(rhs)
+}
+
+struct Vars<const H: usize, const W: usize, const L: usize> {
+    elems: Vec<(Witness, EvalExpression)>,
+}
+
+impl<const H: usize, const W: usize, const L: usize> Vars<H, W, L> {
+    fn new(elems: Vec<(Witness, EvalExpression)>) -> Self {
+        assert_eq!(elems.len(), H * W * L);
+        Self { elems }
+    }
+
+    fn get(&self, h: usize, w: usize, l: usize) -> &(Witness, EvalExpression) {
+        &self.elems[h * W * L + w * L + l]
+    }
+
+    fn get_mut(&mut self, h: usize, w: usize, l: usize) -> &mut (Witness, EvalExpression) {
+        &mut self.elems[h * W * L + w * L + l]
+    }
+
+    fn set(&mut self, h: usize, w: usize, l: usize, value: (Witness, EvalExpression)) {
+        self.elems[h * W * L + w * L + l] = value;
+    }
+
+    fn get_xz(&self, x: usize, z: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..H).map(|h| self.get(h, x, z)).collect()
+    }
+
+    fn get_yz(&self, y: usize, z: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..W).map(|w| self.get(y, w, z)).collect()
+    }
+
+    fn get_xy(&self, x: usize, y: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..L).map(|l| self.get(x, y, l)).collect()
+    }
+
+    fn get_x(&self, x: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..H)
+            .flat_map(|h| (0..L).map(move |l| self.get(h, x, l)))
+            .collect()
+    }
+
+    fn get_y(&self, y: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..W)
+            .flat_map(|w| (0..L).map(move |l| self.get(y, w, l)))
+            .collect()
+    }
+
+    fn get_z(&self, z: usize) -> Vec<&(Witness, EvalExpression)> {
+        (0..H)
+            .flat_map(|h| (0..W).map(move |w| self.get(h, w, z)))
+            .collect()
+    }
 }
 
 impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
@@ -89,55 +149,98 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
         let cloned_evals =
             |v: &Vec<(Witness, EvalExpression)>| v.iter().map(|e| e.1.clone()).collect_vec();
 
-        let (words_and_bits, _) = chip.allocate_wits_in_layer::<{ 50 + STATE_SIZE }, 0>();
-        let words = words_and_bits.iter().take(50).cloned().collect_vec();
-        let bits = words_and_bits.iter().skip(50).cloned().collect_vec();
+        macro_rules! allocate_and_split {
+            ($chip:expr, $total:expr, $( $size:expr ),* ) => {{
+                let (witnesses, _) = $chip.allocate_wits_in_layer::<$total, 0>();
+                let mut iter = witnesses.into_iter();
+                (
+                    $(
+                        iter.by_ref().take($size).collect_vec(),
+                    )*
+                )
+            }};
+        }
 
+        let (state, state8, c, c_aux, XOR_TABLE) =
+            allocate_and_split!(chip, { 50 + 200 + 40 + 200 + 1000 }, 50, 200, 40, 200, 1000);
         // Check if the bit-expansion expressions match the words
-        let zero_checks_expansions = (0..50usize)
-            .into_iter()
-            .map(|w_i| {
-                let bit_expansion = (0..32usize).into_iter().fold(zero_expr(), |acc, i| {
-                    acc + Expression::Const(Constant::Base(1 << i)) * bits[w_i * 32 + i].0.into()
-                });
-                Expression::from(words[w_i].0) - bit_expansion
-            })
-            .collect_vec();
 
-        let zero_checks_expansions = (0..50usize)
-            .into_iter()
-            .map(|i| {
-                let lhs = [(32, words[i].0)];
-                let rhs: [(usize, Witness); 32] = from_fn(|j| (1, bits[32 * i + 31 - j].0));
-                constrain_eq_expr::<32>(&lhs, &rhs)
-            })
-            .collect_vec();
+        let state = Vars::new(state);
 
-        // Check that elements of bits[] are indeed 0/1
-        let zero_checks_binary = (0..STATE_SIZE).into_iter().map(|i| {
-            let bit = Expression::from(bits[i].0);
-            bit.clone() * (bit - one_expr())
-        });
+        let mut exprs: Vec<Expression> = vec![];
+        let mut outputs: Vec<EvalExpression> = vec![];
+        let mut xor_index = 0;
 
-        // Is this the correct args for outs when I want to force expr == 0?
-        let zero_evals =
-            vec![EvalExpression::Linear(0, Constant::Base(0), Constant::Base(0)); 50 + STATE_SIZE];
+        let mut add_constraint = |expr: Expression| {
+            exprs.push(expr);
+            outputs.push(zero_eval());
+        };
 
-        let bits_copy = (0..STATE_SIZE)
-            .into_iter()
-            .map(|i| bits[i].0.clone().into())
-            .collect_vec();
-        let exprs = chain!(zero_checks_expansions, zero_checks_binary, bits_copy).collect_vec();
+        let add_constraints = |exprs: &Vec<Expression>| {
+            for expr in exprs {
+                add_constraint(expr.clone());
+            }
+        };
 
-        chip.add_layer(Layer::new(
-            "nobody cares".to_string(),
-            LayerType::Zerocheck,
-            exprs,
-            vec![],
-            cloned_evals(&words_and_bits.to_vec()),
-            vec![],
-            chain!(zero_evals, final_output.to_vec()).collect_vec(),
-        ));
+        let mut constrain_eq = |lhs: Expression, rhs: Expression| {
+            add_constraint(lhs - rhs);
+        };
+
+        // Assert that c == a xor b
+        let constrain_xor = |c: Expression, a: Expression, b: Expression| {
+            let key = (a * Expression::Const(Constant::Base((1 << 8))) + b);
+            constrain_eq(key, XOR_TABLE[2 * xor_index].0.into());
+            constrain_eq(c, XOR_TABLE[2 * xor_index + 1].0.into());
+            xor_index += 1;
+        };
+
+        let state_to_state8 = {
+            for i in 0..50 {
+                let lhs = [(32, state[i].0)];
+                let rhs: [(usize, Witness); 4] = from_fn(|j| (8, state8[i * 4 + j].0));
+                // add_constraint(constrain_eq_expr::<32>(&lhs, &rhs));
+            }
+        };
+
+        for i in 0..5 {
+            constrain_eq(c_aux[i * 5].0.into(), state[i * 5].0.into());
+            for j in 0..5 {}
+        }
+
+        // let zero_checks_expansions = (0..50usize)
+        //     .into_iter()
+        //     .map(|i| {
+        //         let lhs = [(32, words[i].0)];
+        //         let rhs: [(usize, Witness); 32] = from_fn(|j| (1, bits[32 * i + 31 - j].0));
+        //         constrain_eq_expr::<32>(&lhs, &rhs)
+        //     })
+        //     .collect_vec();
+
+        // // Check that elements of bits[] are indeed 0/1
+        // let zero_checks_binary = (0..STATE_SIZE).into_iter().map(|i| {
+        //     let bit = Expression::from(bits[i].0);
+        //     bit.clone() * (bit - one_expr())
+        // });
+
+        // // Is this the correct args for outs when I want to force expr == 0?
+        // let zero_evals =
+        //     vec![EvalExpression::Linear(0, Constant::Base(0), Constant::Base(0)); 50 + STATE_SIZE];
+
+        // let bits_copy = (0..STATE_SIZE)
+        //     .into_iter()
+        //     .map(|i| bits[i].0.clone().into())
+        //     .collect_vec();
+        // let exprs = chain!(zero_checks_expansions, zero_checks_binary, bits_copy).collect_vec();
+
+        // chip.add_layer(Layer::new(
+        //     "nobody cares".to_string(),
+        //     LayerType::Zerocheck,
+        //     exprs,
+        //     vec![],
+        //     cloned_evals(&chain!(words, bits).collect_vec()),
+        //     vec![],
+        //     chain!(zero_evals, final_output.to_vec()).collect_vec(),
+        // ));
     }
 }
 
