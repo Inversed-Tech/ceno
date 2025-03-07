@@ -114,6 +114,7 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
                     in_bases,
                     in_exts,
                     vec![den, num],
+                    vec![],
                 ));
                 let [challenge] = chip.allocate_challenges();
                 (
@@ -143,6 +144,7 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
             vec![table.1.clone()],
             vec![],
             vec![updated_table],
+            vec![],
         ));
 
         chip.allocate_base_opening(self.committed_table_id, table.1);

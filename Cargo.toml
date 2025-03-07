@@ -37,6 +37,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 crossbeam-channel = "0.5"
 itertools = "0.13"
 num-bigint = { version = "0.4.6" }
+ndarray = "*"
 num-derive = "0.4"
 num-traits = "0.2"
 p3-challenger = { git = "https://github.com/scroll-tech/plonky3", rev = "8d2be81" }

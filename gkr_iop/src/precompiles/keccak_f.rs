@@ -101,7 +101,7 @@ fn d_expr(x: usize, z: usize, c_wits: &[Witness]) -> Expression {
     xor_expr(c_wits[lhs].into(), c_wits[rhs].into())
 }
 
-fn theta<F: Field>(bits: Vec<F>) -> Vec<F> {
+pub fn theta<F: Field>(bits: Vec<F>) -> Vec<F> {
     assert_eq!(bits.len(), STATE_SIZE);
 
     let c_vals = iproduct!(0..5, 0..64)
@@ -277,6 +277,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     chi_output.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
                     round_output.to_vec(),
+                    vec![],
                 ));
 
                 let (theta_output, _) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
@@ -300,6 +301,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     theta_output.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
                     chi_output.iter().map(|e| e.1.clone()).collect_vec(),
+                    vec![],
                 ));
 
                 let (d_and_state, _) = chip.allocate_wits_in_layer::<{ D_SIZE + STATE_SIZE }, 0>();
@@ -321,6 +323,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     d_and_state.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
                     theta_output.iter().map(|e| e.1.clone()).collect_vec(),
+                    vec![],
                 ));
 
                 let (c, []) = chip.allocate_wits_in_layer::<{ C_SIZE }, 0>();
@@ -339,6 +342,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     c.iter().map(|e| e.1.clone()).collect_vec(),
                     vec![],
                     d.iter().map(|e| e.1.clone()).collect_vec(),
+                    vec![],
                 ));
 
                 let (state, []) = chip.allocate_wits_in_layer::<STATE_SIZE, 0>();
@@ -365,6 +369,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                         state2.iter().map(|e| e.1.clone())
                     )
                     .collect_vec(),
+                    vec![],
                 ));
 
                 state.map(|e| e.1.clone())

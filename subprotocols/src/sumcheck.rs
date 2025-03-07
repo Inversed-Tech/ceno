@@ -262,7 +262,11 @@ where
                 expr,
                 expected_claim,
                 got_claim,
+<<<<<<< HEAD
                 "".to_string(),
+=======
+                "unavailable".to_string(),
+>>>>>>> 61e86087 ((wip) one round of keccak_f)
             ));
         }
 
