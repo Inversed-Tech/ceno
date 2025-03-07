@@ -35,6 +35,7 @@ ff = "0.13"
 ff_ext = { path = "./ff_ext" }
 goldilocks = { git = "https://github.com/scroll-tech/ceno-Goldilocks" }
 itertools = "0.13"
+ndarray = "*"
 num-derive = "0.4"
 num-traits = "0.2"
 paste = "1"

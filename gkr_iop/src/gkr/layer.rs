@@ -47,6 +47,8 @@ pub struct Layer {
     /// The expressions of the evaluations from the succeeding layers, which are
     /// connected to the outputs of this layer.
     pub outs: Vec<EvalExpression>,
+
+    pub expr_names: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -66,7 +68,16 @@ impl Layer {
         in_bases: Vec<EvalExpression>,
         in_exts: Vec<EvalExpression>,
         outs: Vec<EvalExpression>,
+        expr_names: Vec<String>,
     ) -> Self {
+        let mut expr_names = expr_names;
+        if expr_names.len() < exprs.len() {
+            expr_names.extend(vec![
+                "unavailable".to_string();
+                exprs.len() - expr_names.len()
+            ]);
+        }
+
         Self {
             name,
             ty,
@@ -75,6 +86,7 @@ impl Layer {
             in_bases,
             in_exts,
             outs,
+            expr_names,
         }
     }
 

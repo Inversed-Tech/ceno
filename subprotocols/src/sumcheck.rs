@@ -262,6 +262,7 @@ where
                 expr,
                 expected_claim,
                 got_claim,
+                "unavailable".to_string(),
             ));
         }
 

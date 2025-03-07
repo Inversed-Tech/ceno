@@ -49,6 +49,7 @@ fn run_verifier<E: ExtensionField>(
     let verifier = ZerocheckVerifierState::new(
         vec![*ans],
         vec![expr],
+        vec![],
         vec![point],
         proof,
         &challenges,
