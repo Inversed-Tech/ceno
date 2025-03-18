@@ -1,5 +1,5 @@
 use ff_ext::ExtensionField;
-use itertools::{Itertools, chain, izip};
+use itertools::{chain, izip, Itertools};
 use layer::{Layer, LayerWitness};
 use subprotocols::{expression::Point, sumcheck::SumcheckProof};
 use transcript::Transcript;

@@ -1,18 +1,18 @@
 use std::{array::from_fn, marker::PhantomData, sync::Arc};
 
 use crate::{
-    ProtocolBuilder, ProtocolWitnessGenerator,
     chip::Chip,
     evaluation::{EvalExpression, PointAndEval},
     gkr::{
-        GKRCircuitWitness, GKRProverOutput,
         layer::{Layer, LayerType, LayerWitness},
+        GKRCircuitWitness, GKRProverOutput,
     },
+    ProtocolBuilder, ProtocolWitnessGenerator,
 };
 use ff::Field;
 use ff_ext::ExtensionField;
 use goldilocks::{Goldilocks, GoldilocksExt2};
-use itertools::{Itertools, chain, iproduct};
+use itertools::{chain, iproduct, Itertools};
 use subprotocols::expression::{Constant, Expression, Witness};
 use tiny_keccak::keccakf;
 use transcript::BasicTranscript;
@@ -101,7 +101,7 @@ fn d_expr(x: usize, z: usize, c_wits: &[Witness]) -> Expression {
     xor_expr(c_wits[lhs].into(), c_wits[rhs].into())
 }
 
-pub fn theta<F: Field>(bits: Vec<F>) -> Vec<F> {
+fn theta<F: Field>(bits: Vec<F>) -> Vec<F> {
     assert_eq!(bits.len(), STATE_SIZE);
 
     let c_vals = iproduct!(0..5, 0..64)
@@ -372,7 +372,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     vec![],
                 ));
 
-                state.map(|e| e.1.clone())
+                state.iter().map(|e| e.1.clone()).collect_vec()
             });
 
         // Skip base opening allocation
@@ -380,8 +380,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
 }
 
 pub struct KeccakTrace {
-    // pub bits: [bool; STATE_SIZE],
-    pub words: [u32; 2 * X * Y],
+    pub bits: [bool; STATE_SIZE],
 }
 
 impl<E> ProtocolWitnessGenerator<E> for KeccakLayout<E>
@@ -393,7 +392,7 @@ where
     fn phase1_witness(&self, phase1: Self::Trace) -> Vec<Vec<E::BaseField>> {
         let mut res = vec![vec![]; 1];
         res[0] = phase1
-            .words
+            .bits
             .into_iter()
             .map(|b| E::BaseField::from(b as u64))
             .collect();
@@ -513,22 +512,15 @@ fn rho_and_pi_permutation() -> Vec<usize> {
     pi(&rho(&perm))
 }
 
-fn u64s_to_u32s(state64: &[u64]) -> Vec<u32> {
-    state64
-        .iter()
-        .flat_map(|&word| vec![(word & 0xFFFFFFFF) as u32, (word >> 32) as u32])
-        .collect()
-}
-
 pub fn run_keccakf(state: [u64; 25], verify: bool, test: bool) -> () {
     let params = KeccakParams {};
     let (layout, chip) = KeccakLayout::build(params);
     let gkr_circuit = chip.gkr_circuit();
 
-    let words = u64s_to_u32s(&state);
+    let bits = u64s_to_bools(&state);
 
     let phase1_witness = layout.phase1_witness(KeccakTrace {
-        words: words.try_into().unwrap(),
+        bits: bits.try_into().unwrap(),
     });
     let mut prover_transcript = BasicTranscript::<E>::new(b"protocol");
 
