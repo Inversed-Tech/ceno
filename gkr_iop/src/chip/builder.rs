@@ -1,5 +1,6 @@
 use std::array;
 
+use itertools::Itertools;
 use subprotocols::expression::{Constant, Witness};
 
 use crate::{
@@ -23,17 +24,23 @@ impl Chip {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f622c173 (working keccak_f & docs)
     /// Allocate `Witness` and `EvalExpression` for the input polynomials in a
     /// layer. Where `Witness` denotes the index and `EvalExpression`
     /// denotes the position to place the evaluation of the polynomial after
     /// processing the layer prover for each polynomial. This should be
     /// called at most once for each layer!
+<<<<<<< HEAD
 =======
     /// Allocate `Witness` and `EvalExpression` for the input polynomials in a layer.
     /// Where `Witness` denotes the index and `EvalExpression` denotes the position
     /// to place the evaluation of the polynomial after processing the layer prover
     /// for each polynomial. This should be called at most once for each layer!
 >>>>>>> 2494c2a0 (Refine according to comments)
+=======
+>>>>>>> f622c173 (working keccak_f & docs)
     #[allow(clippy::type_complexity)]
     pub fn allocate_wits_in_layer<const M: usize, const N: usize>(
         &mut self,
@@ -59,9 +66,17 @@ impl Chip {
     }
 
     /// Generate the evaluation expression for each output.
-    pub fn allocate_output_evals<const N: usize>(&mut self) -> [EvalExpression; N] {
+    // pub fn allocate_output_evals<const N: usize>(&mut self) -> [EvalExpression;
+    // N] {     self.n_evaluations += N;
+    //     array::from_fn(|i| EvalExpression::Single(i + self.n_evaluations - N))
+    // }
+
+    pub fn allocate_output_evals<const N: usize>(&mut self) -> Vec<EvalExpression> {
         self.n_evaluations += N;
-        array::from_fn(|i| EvalExpression::Single(i + self.n_evaluations - N))
+        (0..N)
+            .into_iter()
+            .map(|i| EvalExpression::Single(i + self.n_evaluations - N))
+            .collect_vec()
     }
 
     /// Allocate challenges.

@@ -1,4 +1,5 @@
+mod faster_keccak;
 mod keccak_f;
-mod sequencer;
+mod utils;
+pub use faster_keccak::run_faster_keccakf;
 pub use keccak_f::run_keccakf;
-pub use sequencer::run_sequencer;

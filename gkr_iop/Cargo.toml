@@ -22,3 +22,15 @@ rayon.workspace = true
 subprotocols = { path = "../subprotocols" }
 thiserror = "1"
 transcript = { path = "../transcript" }
+tiny-keccak.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+harness = false
+name = "keccak_f"
+
+[[bench]]
+harness = false
+name = "faster_keccak"

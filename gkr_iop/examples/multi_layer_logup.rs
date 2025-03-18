@@ -65,7 +65,7 @@ impl<E: ExtensionField> ProtocolBuilder for TowerChipLayout<E> {
         let height = self.params.height;
         let lookup_challenge = Expression::Const(self.lookup_challenge.clone());
 
-        self.output_cumulative_sum = chip.allocate_output_evals();
+        self.output_cumulative_sum = chip.allocate_output_evals::<2>().try_into().unwrap();
 
         // Tower layers
         let ([updated_table, count], challenges) = (0..height).fold(
