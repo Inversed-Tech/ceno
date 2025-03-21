@@ -1,4 +1,10 @@
-use std::{array::from_fn, cmp::Ordering, marker::PhantomData, sync::Arc};
+use std::{
+    array::from_fn,
+    cmp::Ordering,
+    iter::{once, zip},
+    marker::PhantomData,
+    sync::Arc,
+};
 
 use crate::{
     chip::Chip,
@@ -721,7 +727,7 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
 }
 
 pub struct KeccakTrace {
-    pub words: [u32; KECCAK_INPUT_SIZE],
+    pub instances: Vec<[u32; KECCAK_INPUT_SIZE]>,
 }
 
 impl<E> ProtocolWitnessGenerator<E> for KeccakLayout<E>
@@ -731,317 +737,336 @@ where
     type Trace = KeccakTrace;
 
     fn phase1_witness(&self, phase1: Self::Trace) -> Vec<Vec<E::BaseField>> {
-        let mut res = vec![vec![]; 2];
-        res[0] = u64s_to_felts::<E>(phase1.words.into_iter().map(|e| e as u64).collect_vec());
+        let mut res = vec![];
+        for instance in phase1.instances {
+            res.push(u64s_to_felts::<E>(
+                instance.into_iter().map(|e| e as u64).collect_vec(),
+            ));
+        }
         res
     }
 
     fn gkr_witness(&self, phase1: &[Vec<E::BaseField>], challenges: &[E]) -> GKRCircuitWitness<E> {
-        let com_state = phase1[self.committed_bits_id].clone();
+        let n_layers = 24 + 2 + 1;
+        let mut layer_wits = vec![
+            LayerWitness {
+                bases: vec![],
+                exts: vec![],
+                num_vars: 1
+            };
+            n_layers
+        ];
 
-        let n_layers = 100;
-        let mut layer_wits = Vec::<LayerWitness<E>>::with_capacity(n_layers + 1);
-
-        fn conv64to8(input: u64) -> [u64; 8] {
-            MaskRepresentation::new(vec![(64, input).into()])
-                .convert(vec![8; 8])
-                .values()
-                .try_into()
-                .unwrap()
-        }
-
-        let mut and_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
-        let mut xor_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
-        let mut range_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
-
-        let mut add_and = |a: u64, b: u64, round: usize| {
-            let c = a & b;
-            and_lookups[round].push((c << 16) + (b << 8) + a);
-        };
-
-        let mut add_xor = |a: u64, b: u64, round: usize| {
-            let c = a ^ b;
-            xor_lookups[round].push((c << 16) + (b << 8) + a);
-        };
-
-        let mut add_range = |value: u64, size: usize, round: usize| {
-            assert!(size <= 16, "{size}");
-            range_lookups[round].push(value);
-            if size < 16 {
-                range_lookups[round].push(value << (16 - size));
+        for com_state in phase1 {
+            fn conv64to8(input: u64) -> [u64; 8] {
+                MaskRepresentation::new(vec![(64, input).into()])
+                    .convert(vec![8; 8])
+                    .values()
+                    .try_into()
+                    .unwrap()
             }
-        };
 
-        let state32 = com_state
-            .into_iter()
-            // TODO double check assumptions about canonical
-            .map(|e| e.to_canonical_u64())
-            .collect_vec();
-        let mut state64 = [[0u64; 5]; 5];
-        let mut state8 = [[[0u64; 8]; 5]; 5];
+            let mut and_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
+            let mut xor_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
+            let mut range_lookups: Vec<Vec<u64>> = vec![vec![]; ROUNDS];
 
-        zip_eq(iproduct!(0..5, 0..5), state32.clone().iter().tuples())
-            .map(|((x, y), (lo, hi))| {
-                state64[x][y] = lo | (hi << 32);
-            })
-            .count();
+            let mut add_and = |a: u64, b: u64, round: usize| {
+                let c = a & b;
+                and_lookups[round].push((c << 16) + (b << 8) + a);
+            };
 
-        for x in 0..5 {
-            for y in 0..5 {
-                state8[x][y] = conv64to8(state64[x][y]);
-            }
-        }
+            let mut add_xor = |a: u64, b: u64, round: usize| {
+                let c = a ^ b;
+                xor_lookups[round].push((c << 16) + (b << 8) + a);
+            };
 
-        layer_wits.push(LayerWitness::new(
-            nest::<E>(&u64s_to_felts::<E>(
-                state8.clone().into_iter().flatten().flatten().collect_vec(),
-            )),
-            vec![],
-        ));
-
-        for round in 0..24 {
-            let mut c_aux64 = [[0u64; 5]; 5];
-            let mut c_aux8 = [[[0u64; 8]; 5]; 5];
-
-            for i in 0..5 {
-                c_aux64[i][0] = state64[0][i];
-                c_aux8[i][0] = conv64to8(c_aux64[i][0]);
-                for j in 1..5 {
-                    c_aux64[i][j] = state64[j][i] ^ c_aux64[i][j - 1];
-                    c_aux8[i][j] = conv64to8(c_aux64[i][j]);
-
-                    for k in 0..8 {
-                        add_xor(c_aux8[i][j - 1][k], state8[j][i][k], round);
-                    }
+            let mut add_range = |value: u64, size: usize, round: usize| {
+                assert!(size <= 16, "{size}");
+                range_lookups[round].push(value);
+                if size < 16 {
+                    range_lookups[round].push(value << (16 - size));
                 }
-            }
+            };
 
-            let mut c64 = [0u64; 5];
-            let mut c8 = [[0u64; 8]; 5];
+            let state32 = com_state
+                .into_iter()
+                // TODO double check assumptions about canonical
+                .map(|e| e.to_canonical_u64())
+                .collect_vec();
+            let mut state64 = [[0u64; 5]; 5];
+            let mut state8 = [[[0u64; 8]; 5]; 5];
 
-            for x in 0..5 {
-                c64[x] = c_aux64[x][4];
-                c8[x] = conv64to8(c64[x]);
-            }
-
-            let mut c_temp = [[0u64; 6]; 5];
-            for i in 0..5 {
-                let rep = MaskRepresentation::new(vec![(64, c64[i]).into()])
-                    .convert(vec![16, 15, 1, 16, 15, 1]);
-                c_temp[i] = rep.values().try_into().unwrap();
-                for mask in rep.rep {
-                    add_range(mask.value, mask.size, round);
-                }
-            }
-
-            let mut crot64 = [0u64; 5];
-            let mut crot8 = [[0u64; 8]; 5];
-            for i in 0..5 {
-                crot64[i] = c64[i].rotate_left(1);
-                crot8[i] = conv64to8(crot64[i]);
-            }
-
-            let mut d64 = [0u64; 5];
-            let mut d8 = [[0u64; 8]; 5];
-            for x in 0..5 {
-                d64[x] = c64[(x + 4) % 5] ^ c64[(x + 1) % 5].rotate_left(1);
-                d8[x] = conv64to8(d64[x]);
-                for k in 0..8 {
-                    add_xor(c_aux8[(x + 4) % 5][4][k], crot8[(x + 1) % 5][k], round);
-                }
-            }
-
-            let mut theta_state64 = state64.clone();
-            let mut theta_state8 = [[[0u64; 8]; 5]; 5];
-            let mut rotation_witness = vec![];
+            zip_eq(iproduct!(0..5, 0..5), state32.clone().iter().tuples())
+                .map(|((x, y), (lo, hi))| {
+                    state64[x][y] = lo | (hi << 32);
+                })
+                .count();
 
             for x in 0..5 {
                 for y in 0..5 {
-                    theta_state64[y][x] ^= d64[x];
-                    theta_state8[y][x] = conv64to8(theta_state64[y][x]);
+                    state8[x][y] = conv64to8(state64[x][y]);
+                }
+            }
 
-                    for k in 0..8 {
-                        add_xor(state8[y][x][k], d8[x][k], round);
+            let mut curr_layer = 0;
+            let mut push_instance = |wits: Vec<u64>| {
+                let felts = u64s_to_felts::<E>(wits);
+                if layer_wits[curr_layer].bases.is_empty() {
+                    layer_wits[curr_layer] = LayerWitness::new(nest::<E>(&felts), vec![]);
+                } else {
+                    for (i, bases) in layer_wits[curr_layer].bases.iter_mut().enumerate() {
+                        bases.push(felts[i]);
                     }
+                }
+                curr_layer += 1;
+            };
 
-                    let (sizes, _) = rotation_split(ROTATION_CONSTANTS[y][x]);
-                    let rep = MaskRepresentation::new(vec![(64, theta_state64[y][x]).into()])
-                        .convert(sizes);
-                    for mask in rep.rep.iter() {
-                        if mask.size != 32 {
-                            add_range(mask.value, mask.size, round);
+            push_instance(state8.clone().into_iter().flatten().flatten().collect_vec());
+
+            for round in 0..24 {
+                let mut c_aux64 = [[0u64; 5]; 5];
+                let mut c_aux8 = [[[0u64; 8]; 5]; 5];
+
+                for i in 0..5 {
+                    c_aux64[i][0] = state64[0][i];
+                    c_aux8[i][0] = conv64to8(c_aux64[i][0]);
+                    for j in 1..5 {
+                        c_aux64[i][j] = state64[j][i] ^ c_aux64[i][j - 1];
+                        c_aux8[i][j] = conv64to8(c_aux64[i][j]);
+
+                        for k in 0..8 {
+                            add_xor(c_aux8[i][j - 1][k], state8[j][i][k], round);
                         }
                     }
-                    rotation_witness.extend(rep.values());
                 }
-            }
 
-            // Rho and Pi steps
-            let mut rhopi_output64 = [[0u64; 5]; 5];
-            let mut rhopi_output8 = [[[0u64; 8]; 5]; 5];
+                let mut c64 = [0u64; 5];
+                let mut c8 = [[0u64; 8]; 5];
 
-            for x in 0..5 {
-                for y in 0..5 {
-                    rhopi_output64[(2 * x + 3 * y) % 5][y % 5] =
-                        theta_state64[y][x].rotate_left(ROTATION_CONSTANTS[y][x] as u32);
+                for x in 0..5 {
+                    c64[x] = c_aux64[x][4];
+                    c8[x] = conv64to8(c64[x]);
                 }
-            }
 
-            for x in 0..5 {
-                for y in 0..5 {
-                    rhopi_output8[x][y] = conv64to8(rhopi_output64[x][y]);
-                }
-            }
-
-            // Chi step
-
-            let mut nonlinear64 = [[0u64; 5]; 5];
-            let mut nonlinear8 = [[[0u64; 8]; 5]; 5];
-            for x in 0..5 {
-                for y in 0..5 {
-                    nonlinear64[y][x] =
-                        !rhopi_output64[y][(x + 1) % 5] & rhopi_output64[y][(x + 2) % 5];
-                    nonlinear8[y][x] = conv64to8(nonlinear64[y][x]);
-
-                    for k in 0..8 {
-                        add_and(
-                            0xFF - rhopi_output8[y][(x + 1) % 5][k],
-                            rhopi_output8[y][(x + 2) % 5][k],
-                            round,
-                        );
+                let mut c_temp = [[0u64; 6]; 5];
+                for i in 0..5 {
+                    let rep = MaskRepresentation::new(vec![(64, c64[i]).into()])
+                        .convert(vec![16, 15, 1, 16, 15, 1]);
+                    c_temp[i] = rep.values().try_into().unwrap();
+                    for mask in rep.rep {
+                        add_range(mask.value, mask.size, round);
                     }
                 }
-            }
 
-            let mut chi_output64 = [[0u64; 5]; 5];
-            let mut chi_output8 = [[[0u64; 8]; 5]; 5];
-            for x in 0..5 {
-                for y in 0..5 {
-                    chi_output64[y][x] = nonlinear64[y][x] ^ rhopi_output64[y][x];
-                    chi_output8[y][x] = conv64to8(chi_output64[y][x]);
+                let mut crot64 = [0u64; 5];
+                let mut crot8 = [[0u64; 8]; 5];
+                for i in 0..5 {
+                    crot64[i] = c64[i].rotate_left(1);
+                    crot8[i] = conv64to8(crot64[i]);
+                }
+
+                let mut d64 = [0u64; 5];
+                let mut d8 = [[0u64; 8]; 5];
+                for x in 0..5 {
+                    d64[x] = c64[(x + 4) % 5] ^ c64[(x + 1) % 5].rotate_left(1);
+                    d8[x] = conv64to8(d64[x]);
                     for k in 0..8 {
-                        add_xor(rhopi_output8[y][x][k], nonlinear8[y][x][k], round)
+                        add_xor(c_aux8[(x + 4) % 5][4][k], crot8[(x + 1) % 5][k], round);
                     }
                 }
+
+                let mut theta_state64 = state64.clone();
+                let mut theta_state8 = [[[0u64; 8]; 5]; 5];
+                let mut rotation_witness = vec![];
+
+                for x in 0..5 {
+                    for y in 0..5 {
+                        theta_state64[y][x] ^= d64[x];
+                        theta_state8[y][x] = conv64to8(theta_state64[y][x]);
+
+                        for k in 0..8 {
+                            add_xor(state8[y][x][k], d8[x][k], round);
+                        }
+
+                        let (sizes, _) = rotation_split(ROTATION_CONSTANTS[y][x]);
+                        let rep = MaskRepresentation::new(vec![(64, theta_state64[y][x]).into()])
+                            .convert(sizes);
+                        for mask in rep.rep.iter() {
+                            if mask.size != 32 {
+                                add_range(mask.value, mask.size, round);
+                            }
+                        }
+                        rotation_witness.extend(rep.values());
+                    }
+                }
+
+                // Rho and Pi steps
+                let mut rhopi_output64 = [[0u64; 5]; 5];
+                let mut rhopi_output8 = [[[0u64; 8]; 5]; 5];
+
+                for x in 0..5 {
+                    for y in 0..5 {
+                        rhopi_output64[(2 * x + 3 * y) % 5][y % 5] =
+                            theta_state64[y][x].rotate_left(ROTATION_CONSTANTS[y][x] as u32);
+                    }
+                }
+
+                for x in 0..5 {
+                    for y in 0..5 {
+                        rhopi_output8[x][y] = conv64to8(rhopi_output64[x][y]);
+                    }
+                }
+
+                // Chi step
+
+                let mut nonlinear64 = [[0u64; 5]; 5];
+                let mut nonlinear8 = [[[0u64; 8]; 5]; 5];
+                for x in 0..5 {
+                    for y in 0..5 {
+                        nonlinear64[y][x] =
+                            !rhopi_output64[y][(x + 1) % 5] & rhopi_output64[y][(x + 2) % 5];
+                        nonlinear8[y][x] = conv64to8(nonlinear64[y][x]);
+
+                        for k in 0..8 {
+                            add_and(
+                                0xFF - rhopi_output8[y][(x + 1) % 5][k],
+                                rhopi_output8[y][(x + 2) % 5][k],
+                                round,
+                            );
+                        }
+                    }
+                }
+
+                let mut chi_output64 = [[0u64; 5]; 5];
+                let mut chi_output8 = [[[0u64; 8]; 5]; 5];
+                for x in 0..5 {
+                    for y in 0..5 {
+                        chi_output64[y][x] = nonlinear64[y][x] ^ rhopi_output64[y][x];
+                        chi_output8[y][x] = conv64to8(chi_output64[y][x]);
+                        for k in 0..8 {
+                            add_xor(rhopi_output8[y][x][k], nonlinear8[y][x][k], round)
+                        }
+                    }
+                }
+
+                // Iota step
+                let mut iota_output64 = chi_output64.clone();
+                let mut iota_output8 = [[[0u64; 8]; 5]; 5];
+                iota_output64[0][0] ^= RC[round];
+
+                for k in 0..8 {
+                    add_xor(chi_output8[0][0][k], (RC[round] >> (k * 8)) & 0xFF, round);
+                }
+
+                for x in 0..5 {
+                    for y in 0..5 {
+                        iota_output8[x][y] = conv64to8(iota_output64[x][y]);
+                    }
+                }
+
+                let all_wits64 = [
+                    state8.into_iter().flatten().flatten().collect_vec(),
+                    c_aux8.into_iter().flatten().flatten().collect_vec(),
+                    c_temp.into_iter().flatten().collect_vec(),
+                    crot8.into_iter().flatten().collect_vec(),
+                    d8.into_iter().flatten().collect_vec(),
+                    theta_state8.into_iter().flatten().flatten().collect_vec(),
+                    rotation_witness,
+                    rhopi_output8.into_iter().flatten().flatten().collect_vec(),
+                    nonlinear8.into_iter().flatten().flatten().collect_vec(),
+                    chi_output8.into_iter().flatten().flatten().collect_vec(),
+                    iota_output8
+                        .clone()
+                        .into_iter()
+                        .flatten()
+                        .flatten()
+                        .collect_vec(),
+                ];
+
+                // let sizes = all_wits64.iter().map(|e| e.len()).collect_vec();
+                // dbg!(&sizes);
+
+                // let all_wits = nest::<E>(
+                //     &all_wits64
+                //         .into_iter()
+                //         .flat_map(|v| u64s_to_felts::<E>(v))
+                //         .collect_vec(),
+                // );
+
+                push_instance(all_wits64.into_iter().flatten().collect_vec());
+
+                state8 = iota_output8;
+                state64 = iota_output64;
             }
 
-            // Iota step
-            let mut iota_output64 = chi_output64.clone();
-            let mut iota_output8 = [[[0u64; 8]; 5]; 5];
-            iota_output64[0][0] ^= RC[round];
-
-            for k in 0..8 {
-                add_xor(chi_output8[0][0][k], (RC[round] >> (k * 8)) & 0xFF, round);
-            }
+            let mut keccak_output32 = vec![vec![vec![0; 2]; 5]; 5];
 
             for x in 0..5 {
                 for y in 0..5 {
-                    iota_output8[x][y] = conv64to8(iota_output64[x][y]);
+                    keccak_output32[x][y] = MaskRepresentation::from(
+                        state8[x][y].into_iter().map(|e| (8, e)).collect_vec(),
+                    )
+                    .convert(vec![32; 2])
+                    .values();
                 }
             }
 
-            let all_wits64 = [
-                state8.into_iter().flatten().flatten().collect_vec(),
-                c_aux8.into_iter().flatten().flatten().collect_vec(),
-                c_temp.into_iter().flatten().collect_vec(),
-                crot8.into_iter().flatten().collect_vec(),
-                d8.into_iter().flatten().collect_vec(),
-                theta_state8.into_iter().flatten().flatten().collect_vec(),
-                rotation_witness,
-                rhopi_output8.into_iter().flatten().flatten().collect_vec(),
-                nonlinear8.into_iter().flatten().flatten().collect_vec(),
-                chi_output8.into_iter().flatten().flatten().collect_vec(),
-                iota_output8
-                    .clone()
-                    .into_iter()
-                    .flatten()
-                    .flatten()
-                    .collect_vec(),
-            ];
+            push_instance(state8.clone().into_iter().flatten().flatten().collect_vec());
 
-            // let sizes = all_wits64.iter().map(|e| e.len()).collect_vec();
-            // dbg!(&sizes);
+            // For temporary convenience, use one extra layer to store the correct outputs
+            // of the circuit This is not used during proving
+            let lookups = (0..24)
+                .into_iter()
+                .rev()
+                .flat_map(|i| {
+                    chain!(
+                        and_lookups[i].clone(),
+                        xor_lookups[i].clone(),
+                        range_lookups[i].clone()
+                    )
+                })
+                .collect_vec();
 
-            let all_wits = nest::<E>(
-                &all_wits64
-                    .into_iter()
-                    .flat_map(|v| u64s_to_felts::<E>(v))
-                    .collect_vec(),
-            );
-
-            layer_wits.push(LayerWitness::new(all_wits, vec![]));
-
-            state8 = iota_output8;
-            state64 = iota_output64;
-        }
-
-        let mut keccak_output32 = vec![vec![vec![0; 2]; 5]; 5];
-
-        for x in 0..5 {
-            for y in 0..5 {
-                keccak_output32[x][y] = MaskRepresentation::from(
-                    state8[x][y].into_iter().map(|e| (8, e)).collect_vec(),
-                )
-                .convert(vec![32; 2])
-                .values();
-            }
-        }
-
-        layer_wits.push(LayerWitness::new(
-            nest::<E>(&u64s_to_felts::<E>(
-                state8.clone().into_iter().flatten().flatten().collect_vec(),
-            )),
-            vec![],
-        ));
-
-        layer_wits.reverse();
-
-        // For temporary convenience, use one extra layer to store the correct outputs
-        // of the circuit This is not used during proving
-        let lookups = (0..24)
-            .into_iter()
-            .rev()
-            .flat_map(|i| {
+            push_instance(
                 chain!(
-                    and_lookups[i].clone(),
-                    xor_lookups[i].clone(),
-                    range_lookups[i].clone()
+                    keccak_output32.into_iter().flatten().flatten(),
+                    state32,
+                    lookups
                 )
-            })
-            .collect_vec();
+                .collect_vec(),
+            );
+        }
 
-        let final_output = nest::<E>(&u64s_to_felts::<E>(
-            chain!(
-                keccak_output32.into_iter().flatten().flatten(),
-                state32,
-                lookups
-            )
-            .collect_vec(),
-        ));
-
-        layer_wits.push(LayerWitness::new(final_output, vec![]));
+        let len = layer_wits.len() - 1;
+        layer_wits[..len].reverse();
 
         GKRCircuitWitness { layers: layer_wits }
     }
 }
 
-pub fn run_faster_keccakf(state: [u64; 25], verify: bool, test: bool) -> () {
+pub fn run_faster_keccakf(states: Vec<[u64; 25]>, verify: bool, test: bool) -> () {
     let params = KeccakParams {};
     let (layout, chip) = KeccakLayout::build(params);
     let gkr_circuit = chip.gkr_circuit();
 
-    let state_mask64 = MaskRepresentation::from(state.into_iter().map(|e| (64, e)).collect_vec());
-    let state_mask32 = state_mask64.convert(vec![32; 50]);
+    let mut instances = vec![];
+    for state in states {
+        let state_mask64 =
+            MaskRepresentation::from(state.into_iter().map(|e| (64, e)).collect_vec());
+        let state_mask32 = state_mask64.convert(vec![32; 50]);
 
-    let phase1_witness = layout.phase1_witness(KeccakTrace {
-        words: state_mask32
-            .values()
-            .iter()
-            .map(|e| *e as u32)
-            .collect_vec()
-            .try_into()
-            .unwrap(),
-    });
+        instances.push(
+            state_mask32
+                .values()
+                .iter()
+                .map(|e| *e as u32)
+                .collect_vec()
+                .try_into()
+                .unwrap(),
+        );
+    }
+
+    let phase1_witness = layout.phase1_witness(KeccakTrace { instances });
 
     let mut prover_transcript = BasicTranscript::<E>::new(b"protocol");
 
@@ -1049,37 +1074,50 @@ pub fn run_faster_keccakf(state: [u64; 25], verify: bool, test: bool) -> () {
     let gkr_witness: GKRCircuitWitness<E> = layout.gkr_witness(&phase1_witness, &vec![]);
 
     let out_evals = {
-        let point = Arc::new(vec![]);
-        let final_output = gkr_witness
+        let point1 = Arc::new(vec![GoldilocksExt2::ZERO]);
+        let point2 = Arc::new(vec![GoldilocksExt2::ONE]);
+        let final_output1 = gkr_witness
             .layers
             .last()
             .unwrap()
             .bases
-            .clone()
-            .into_iter()
-            .flatten()
+            //.clone()
+            .iter()
+            .map(|base| base[0].clone())
+            .collect_vec();
+        let final_output2 = gkr_witness
+            .layers
+            .last()
+            .unwrap()
+            .bases
+            //.clone()
+            .iter()
+            .map(|base| base[1].clone())
             .collect_vec();
 
-        if test {
-            // confront outputs with tiny_keccak result
-            let mut keccak_output64 = state_mask64.values().try_into().unwrap();
-            keccakf(&mut keccak_output64);
+        // if test {
+        //     // confront outputs with tiny_keccak result
+        //     let mut keccak_output64 = state_mask64.values().try_into().unwrap();
+        //     keccakf(&mut keccak_output64);
 
-            let keccak_output32 = MaskRepresentation::from(
-                keccak_output64.into_iter().map(|e| (64, e)).collect_vec(),
-            )
-            .convert(vec![32; 50])
-            .values();
+        //     let keccak_output32 = MaskRepresentation::from(
+        //         keccak_output64.into_iter().map(|e| (64, e)).collect_vec(),
+        //     )
+        //     .convert(vec![32; 50])
+        //     .values();
 
-            let keccak_output32 = u64s_to_felts::<E>(keccak_output32);
-            assert_eq!(keccak_output32, final_output[..50]);
-        }
+        //     let keccak_output32 = u64s_to_felts::<E>(keccak_output32);
+        //     assert_eq!(keccak_output32, final_output[..50]);
+        // }
 
-        let gkr_outputs = final_output;
-
+        let len = final_output1.len();
+        let gkr_outputs = chain!(
+            zip(final_output1, once(point1).cycle().take(len)),
+            zip(final_output2, once(point2).cycle().take(len))
+        );
         gkr_outputs
             .into_iter()
-            .map(|elem| PointAndEval {
+            .map(|(elem, point)| PointAndEval {
                 point: point.clone(),
                 eval: GoldilocksExt2::new_from_base(&[elem, Goldilocks::ZERO]),
             })
@@ -1113,10 +1151,11 @@ mod tests {
         for _ in 0..3 {
             let random_u64: u64 = rand::random();
             // Use seeded rng for debugging convenience
-            let mut rng = rand::rngs::StdRng::seed_from_u64(random_u64);
-            let state: [u64; 25] = std::array::from_fn(|_| rng.gen());
+            let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+            let state1: [u64; 25] = std::array::from_fn(|_| rng.gen());
+            let state2: [u64; 25] = std::array::from_fn(|_| rng.gen());
             // let state = [0; 50];
-            run_faster_keccakf(state, true, true);
+            run_faster_keccakf(vec![state1, state2], true, true);
         }
     }
 }

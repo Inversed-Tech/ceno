@@ -24,10 +24,11 @@ fn keccak_f_fn(c: &mut Criterion) {
             for _ in 0..iters {
                 // Use seeded rng for debugging convenience
                 let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-                let state: [u64; 25] = std::array::from_fn(|_| rng.gen());
+                let state1: [u64; 25] = std::array::from_fn(|_| rng.gen());
+                let state2: [u64; 25] = std::array::from_fn(|_| rng.gen());
 
                 let instant = std::time::Instant::now();
-                let _ = black_box(run_faster_keccakf(state, false, false));
+                let _ = black_box(run_faster_keccakf(vec![state1, state2], false, false));
                 let elapsed = instant.elapsed();
                 time += elapsed;
             }
