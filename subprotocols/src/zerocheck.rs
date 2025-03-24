@@ -297,11 +297,7 @@ where
                     expr,
                     expected_claim,
                     got_claim,
-<<<<<<< HEAD
                     "".to_string(),
-=======
-                    expr_name,
->>>>>>> 61e86087 ((wip) one round of keccak_f)
                 ));
             }
         }

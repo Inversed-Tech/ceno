@@ -23,24 +23,11 @@ impl Chip {
         array::from_fn(|i| i + self.n_committed_exts - N)
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> f622c173 (working keccak_f & docs)
     /// Allocate `Witness` and `EvalExpression` for the input polynomials in a
     /// layer. Where `Witness` denotes the index and `EvalExpression`
     /// denotes the position to place the evaluation of the polynomial after
     /// processing the layer prover for each polynomial. This should be
     /// called at most once for each layer!
-<<<<<<< HEAD
-=======
-    /// Allocate `Witness` and `EvalExpression` for the input polynomials in a layer.
-    /// Where `Witness` denotes the index and `EvalExpression` denotes the position
-    /// to place the evaluation of the polynomial after processing the layer prover
-    /// for each polynomial. This should be called at most once for each layer!
->>>>>>> 2494c2a0 (Refine according to comments)
-=======
->>>>>>> f622c173 (working keccak_f & docs)
     #[allow(clippy::type_complexity)]
     pub fn allocate_wits_in_layer<const M: usize, const N: usize>(
         &mut self,
