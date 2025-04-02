@@ -19,8 +19,12 @@ pub use self::{
     wavelet::wavelet_transform,
 };
 
+fn debug_f<F: FftField + std::fmt::Debug>() -> String {
+    format!("{:?}", F::GENERATOR)
+}
+
 /// RS encode at a rate 1/`expansion`.
-#[instrument(skip_all, name="expand_from_coeff", fields(coeffs_len=coeffs.len(), expansion=expansion))]
+#[instrument(skip_all, name="expand_from_coeff", fields(coeffs_len=coeffs.len(), expansion=expansion, generator=debug_f::<F>()))]
 pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> {
     let engine = ntt_impl::NttEngine::<F>::new_from_cache();
     // println!(
