@@ -13,6 +13,7 @@ use nimue::{
     ByteWriter, ProofResult,
     plugins::ark::{FieldChallenges, FieldWriter},
 };
+use tracing::instrument;
 
 use crate::whir::fs_utils::DigestWriter;
 #[cfg(feature = "parallel")]
@@ -47,6 +48,7 @@ where
         Self(config)
     }
 
+    #[instrument(skip_all, name = "commit")]
     pub fn commit<Merlin>(
         &self,
         merlin: &mut Merlin,
@@ -55,6 +57,7 @@ where
     where
         Merlin: FieldWriter<F> + FieldChallenges<F> + ByteWriter + DigestWriter<MerkleConfig>,
     {
+        // println!("commit for field: {:?}", F::GENERATOR);
         let timer = start_timer!(|| "Single Commit");
         // If size of polynomial < folding factor, keep doubling polynomial size by cloning itself
         polynomial.pad_to_num_vars(self.0.folding_factor.at_round(0));

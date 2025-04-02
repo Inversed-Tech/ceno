@@ -13,6 +13,7 @@ use nimue::{
     ByteWriter, ProofResult,
     plugins::ark::{FieldChallenges, FieldWriter},
 };
+use tracing::instrument;
 
 use crate::whir::fs_utils::DigestWriter;
 #[cfg(feature = "parallel")]
@@ -61,6 +62,7 @@ where
     MerkleConfig: Config<Leaf = [F]>,
     PowStrategy: Sync,
 {
+    #[instrument(skip_all, name = "batch_commit")]
     pub fn batch_commit<Merlin>(
         &self,
         merlin: &mut Merlin,

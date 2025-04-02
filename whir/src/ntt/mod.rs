@@ -8,6 +8,7 @@ mod wavelet;
 
 use self::matrix::MatrixMut;
 use ark_ff::FftField;
+use tracing::{debug_span, instrument};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -19,8 +20,15 @@ pub use self::{
 };
 
 /// RS encode at a rate 1/`expansion`.
+#[instrument(skip_all, name="expand_from_coeff", fields(coeffs_len=coeffs.len(), expansion=expansion))]
 pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> {
     let engine = ntt_impl::NttEngine::<F>::new_from_cache();
+    // println!(
+    // "expand_from_coeff with order {} and expansion {} and len {}",
+    // engine.order,
+    // expansion,
+    // coeffs.len()
+    // );
     let expanded_size = coeffs.len() * expansion;
     let mut result = Vec::with_capacity(expanded_size);
     // Note: We can also zero-extend the coefficients and do a larger NTT.
@@ -39,6 +47,7 @@ pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> 
             val
         }));
     }
+    let twiddle_span = debug_span!("create twiddles").entered();
     #[cfg(feature = "parallel")]
     result.par_extend((1..expansion).into_par_iter().flat_map(|i| {
         let root_i = root.pow([i as u64]);
@@ -54,8 +63,13 @@ pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> 
                 *coeff * *root_j
             })
     }));
+    drop(twiddle_span);
 
+    let ntt_span = debug_span!("ntt").entered();
     ntt_batch(&mut result, coeffs.len());
+    drop(ntt_span);
+    let transpose_span = debug_span!("transpose").entered();
     transpose(&mut result, expansion, coeffs.len());
+    drop(transpose_span);
     result
 }

@@ -26,6 +26,8 @@ use whir::whir::{
     iopattern::DigestIOPattern,
 };
 
+use tracing_profile::init_tracing;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -72,6 +74,7 @@ struct Args {
 type PowStrategy = Blake3PoW;
 
 fn main() {
+    let _guard = init_tracing().expect("failed to initialize tracing");
     let mut args = Args::parse();
     let field = args.field;
     let merkle = args.merkle_tree;

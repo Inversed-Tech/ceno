@@ -20,6 +20,7 @@ use nimue::{
     plugins::ark::{FieldChallenges, FieldWriter},
 };
 use nimue_pow::{self, PoWChallenge};
+use tracing::instrument;
 
 use crate::whir::fs_utils::{DigestWriter, get_challenge_stir_queries};
 #[cfg(feature = "parallel")]
@@ -66,6 +67,7 @@ where
         witness.polynomial.num_variables() == self.0.mv_parameters.num_variables
     }
 
+    #[instrument(skip_all, name = "prove")]
     pub fn prove<Merlin>(
         &self,
         merlin: &mut Merlin,

@@ -27,6 +27,7 @@ use nimue::{
     plugins::ark::{FieldChallenges, FieldWriter},
 };
 use nimue_pow::{self, PoWChallenge};
+use tracing::instrument;
 
 use crate::whir::fs_utils::{DigestWriter, get_challenge_stir_queries};
 #[cfg(feature = "parallel")]
@@ -69,6 +70,7 @@ where
     }
 
     /// batch open the same points for multiple polys
+    #[instrument(skip_all, name = "simple_batch_prove")]
     pub fn simple_batch_prove<Merlin>(
         &self,
         merlin: &mut Merlin,
