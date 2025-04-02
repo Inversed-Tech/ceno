@@ -13,7 +13,7 @@ use nimue::{
     ByteWriter, ProofResult,
     plugins::ark::{FieldChallenges, FieldWriter},
 };
-use tracing::instrument;
+use tracing::{debug_span, instrument};
 
 use crate::whir::fs_utils::DigestWriter;
 #[cfg(feature = "parallel")]
@@ -93,12 +93,14 @@ where
         let leafs_iter = folded_evals.par_chunks_exact(fold_size);
 
         let merkle_build_timer = start_timer!(|| "Single Merkle Tree Build");
+        let merkle_span = debug_span!("merkle_tree").entered();
         let merkle_tree = MerkleTree::<MerkleConfig>::new(
             &self.0.leaf_hash_params,
             &self.0.two_to_one_params,
             leafs_iter,
         )
         .unwrap();
+        drop(merkle_span);
         end_timer!(merkle_build_timer);
 
         let root = merkle_tree.root();
@@ -109,12 +111,14 @@ where
         let mut ood_answers = Vec::with_capacity(self.0.committment_ood_samples);
         if self.0.committment_ood_samples > 0 {
             merlin.fill_challenge_scalars(&mut ood_points)?;
+            let eval_poly_span = debug_span!("evaluate poly").entered();
             ood_answers.extend(ood_points.iter().map(|ood_point| {
                 polynomial.evaluate_at_extension(&MultilinearPoint::expand_from_univariate(
                     *ood_point,
                     self.0.mv_parameters.num_variables,
                 ))
             }));
+            drop(eval_poly_span);
             merlin.add_scalars(&ood_answers)?;
         }
 

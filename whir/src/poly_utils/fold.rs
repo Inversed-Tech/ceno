@@ -1,8 +1,8 @@
 use crate::{ntt::intt_batch, parameters::FoldType};
 use ark_ff::{FftField, Field};
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use tracing::instrument;
 
 /// Given the evaluation of f on the coset specified by coset_offset * <coset_gen>
 /// Compute the fold on that point
@@ -43,6 +43,7 @@ pub fn compute_fold<F: Field>(
     answers[0]
 }
 
+#[instrument(skip_all, fields(folding_factor=folding_factor))]
 pub fn restructure_evaluations<F: FftField>(
     mut stacked_evaluations: Vec<F>,
     fold_type: FoldType,

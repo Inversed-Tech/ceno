@@ -65,11 +65,8 @@ pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> 
     }));
     drop(twiddle_span);
 
-    let ntt_span = debug_span!("ntt").entered();
     ntt_batch(&mut result, coeffs.len());
-    drop(ntt_span);
-    let transpose_span = debug_span!("transpose").entered();
     transpose(&mut result, expansion, coeffs.len());
-    drop(transpose_span);
+
     result
 }

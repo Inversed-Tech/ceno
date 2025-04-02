@@ -13,6 +13,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, LazyLock, Mutex, RwLock, RwLockReadGuard},
 };
+use tracing::instrument;
 
 #[cfg(feature = "parallel")]
 use {rayon::prelude::*, std::cmp::max};
@@ -44,21 +45,25 @@ pub struct NttEngine<F: Field> {
 }
 
 /// Compute the NTT of a slice of field elements using a cached engine.
+#[instrument(skip_all, name = "ntt", fields(len = values.len()))]
 pub fn ntt<F: FftField>(values: &mut [F]) {
     NttEngine::<F>::new_from_cache().ntt(values);
 }
 
 /// Compute the many NTTs of size `size` using a cached engine.
+#[instrument(skip_all, name = "ntt_batch", fields(len = values.len(), size = size))]
 pub fn ntt_batch<F: FftField>(values: &mut [F], size: usize) {
     NttEngine::<F>::new_from_cache().ntt_batch(values, size);
 }
 
 /// Compute the inverse NTT of a slice of field element without the 1/n scaling factor, using a cached engine.
+#[instrument(skip_all, name = "intt", fields(len = values.len()))]
 pub fn intt<F: FftField>(values: &mut [F]) {
     NttEngine::<F>::new_from_cache().intt(values);
 }
 
 /// Compute the inverse NTT of multiple slice of field elements, each of size `size`, without the 1/n scaling factor and using a cached engine.
+#[instrument(skip_all, name = "intt_batch", fields(len = values.len(), size = size))]
 pub fn intt_batch<F: FftField>(values: &mut [F], size: usize) {
     NttEngine::<F>::new_from_cache().intt_batch(values, size);
 }

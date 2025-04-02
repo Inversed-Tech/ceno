@@ -1,6 +1,7 @@
 use crate::ntt::{transpose, transpose_bench_allocate};
 use ark_ff::Field;
 use std::collections::BTreeSet;
+use tracing::instrument;
 
 // checks whether the given number n is a power of two.
 pub fn is_power_of_two(n: usize) -> bool {
@@ -73,6 +74,7 @@ pub fn dedup<T: Ord>(v: impl IntoIterator<Item = T>) -> Vec<T> {
 
 /// Takes the vector of evaluations (assume that evals[i] = f(omega^i))
 /// and folds them into a vector of such that folded_evals[i] = [f(omega^(i + k * j)) for j in 0..folding_factor]
+#[instrument(skip(evals))]
 pub fn stack_evaluations<F: Field>(mut evals: Vec<F>, folding_factor: usize) -> Vec<F> {
     let folding_factor_exp = 1 << folding_factor;
     assert!(evals.len() % folding_factor_exp == 0);

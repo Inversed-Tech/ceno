@@ -5,6 +5,7 @@ use ark_std::{end_timer, start_timer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 #[cfg(feature = "parallel")]
 use rayon::join;
+use tracing::instrument;
 
 // NOTE: The assumption that rows and cols are a power of two are actually only relevant for the square matrix case.
 // (This is because the algorithm recurses into 4 sub-matrices of half dimension; we assume those to be square matrices as well, which only works for powers of two).
@@ -12,6 +13,7 @@ use rayon::join;
 /// Transpose a matrix in-place.
 /// Will batch transpose multiple matrices if the length of the slice is a multiple of rows * cols.
 /// This algorithm assumes that both rows and cols are powers of two.
+#[instrument(skip_all, name="transpose", fields(rows=rows,cols=cols))]
 pub fn transpose<F: Sized + Copy + Send>(matrix: &mut [F], rows: usize, cols: usize) {
     debug_assert_eq!(matrix.len() % (rows * cols), 0);
     // eprintln!(
