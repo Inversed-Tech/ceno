@@ -43,7 +43,15 @@ pub fn compute_fold<F: Field>(
     answers[0]
 }
 
-#[instrument(skip_all, fields(folding_factor=folding_factor))]
+fn debug_f<F: FftField + std::fmt::Debug>() -> String {
+    format!(
+        "generator = {:?}, two_adicity = {:?}",
+        F::GENERATOR,
+        F::TWO_ADICITY
+    )
+}
+
+#[instrument(skip_all, fields(folding_factor=folding_factor, dbg=debug_f::<F>()))]
 pub fn restructure_evaluations<F: FftField>(
     mut stacked_evaluations: Vec<F>,
     fold_type: FoldType,

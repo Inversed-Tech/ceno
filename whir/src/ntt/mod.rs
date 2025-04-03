@@ -20,11 +20,15 @@ pub use self::{
 };
 
 fn debug_f<F: FftField + std::fmt::Debug>() -> String {
-    format!("{:?}", F::GENERATOR)
+    format!(
+        "generator = {:?}, two_adicity = {:?}",
+        F::GENERATOR,
+        F::TWO_ADICITY
+    )
 }
 
 /// RS encode at a rate 1/`expansion`.
-#[instrument(skip_all, name="expand_from_coeff", fields(coeffs_len=coeffs.len(), expansion=expansion, generator=debug_f::<F>()))]
+#[instrument(skip_all, name="expand_from_coeff", fields(coeffs_len=coeffs.len(), expansion=expansion, dbg=debug_f::<F>()))]
 pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> {
     let engine = ntt_impl::NttEngine::<F>::new_from_cache();
     // println!(
