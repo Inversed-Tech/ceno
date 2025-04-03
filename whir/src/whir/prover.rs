@@ -20,7 +20,7 @@ use nimue::{
     plugins::ark::{FieldChallenges, FieldWriter},
 };
 use nimue_pow::{self, PoWChallenge};
-use tracing::instrument;
+use tracing::{debug_span, instrument};
 
 use crate::whir::fs_utils::{DigestWriter, get_challenge_stir_queries};
 #[cfg(feature = "parallel")]
@@ -213,10 +213,12 @@ where
                 merlin,
             )?;
 
+            let multi_proof_span = debug_span!("multi_proof").entered();
             let merkle_proof = round_state
                 .prev_merkle
                 .generate_multi_proof(final_challenge_indexes.clone())
                 .unwrap();
+            drop(multi_proof_span);
             // Every query requires opening these many in the previous Merkle tree
             let fold_size = 1 << self.0.folding_factor.at_round(round_state.round);
             let answers = final_challenge_indexes
@@ -280,12 +282,14 @@ where
         #[cfg(feature = "parallel")]
         let leafs_iter = folded_evals
             .par_chunks_exact(1 << self.0.folding_factor.at_round(round_state.round + 1));
+        let merkle_tree_span = debug_span!("merkle_tree").entered();
         let merkle_tree = MerkleTree::<MerkleConfig>::new(
             &self.0.leaf_hash_params,
             &self.0.two_to_one_params,
             leafs_iter,
         )
         .unwrap();
+        drop(merkle_tree_span);
 
         let root = merkle_tree.root();
         merlin.add_digest(root)?;
@@ -326,10 +330,12 @@ where
             .map(|univariate| MultilinearPoint::expand_from_univariate(univariate, num_variables))
             .collect();
 
+        let multi_proof_span = debug_span!("multi_proof").entered();
         let merkle_proof = round_state
             .prev_merkle
             .generate_multi_proof(stir_challenges_indexes.clone())
             .unwrap();
+        drop(multi_proof_span);
         let fold_size = 1 << self.0.folding_factor.at_round(round_state.round);
         let answers: Vec<_> = stir_challenges_indexes
             .iter()
@@ -337,6 +343,7 @@ where
             .collect();
         // Evaluate answers in the folding randomness.
         let mut stir_evaluations = ood_answers.clone();
+        let fold_span = debug_span!("prover_fold").entered();
         match self.0.fold_optimisation {
             FoldType::Naive => {
                 // See `Verifier::compute_folds_full`
@@ -388,6 +395,7 @@ where
                 CoefficientList::new(answers.to_vec()).evaluate(&round_state.folding_randomness)
             })),
         }
+        drop(fold_span);
         round_state.merkle_proofs.push((merkle_proof, answers));
 
         // PoW

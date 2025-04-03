@@ -3,6 +3,7 @@ use crate::poly_utils::{MultilinearPoint, coeffs::CoefficientList, evals::Evalua
 use ark_ff::Field;
 #[cfg(feature = "parallel")]
 use rayon::{join, prelude::*};
+use tracing::instrument;
 
 pub struct SumcheckSingle<F> {
     // The evaluation of p
@@ -19,6 +20,7 @@ where
     // Get the coefficient of polynomial p and a list of points
     // and initialises the table of the initial polynomial
     // v(X_1, ..., X_n) = p(X_1, ... X_n) * (epsilon_1 eq_z_1(X) + epsilon_2 eq_z_2(X) ...)
+    #[instrument(skip_all, name = "SumcheckSingle::new")]
     pub fn new(
         coeffs: CoefficientList<F>,
         points: &[MultilinearPoint<F>],
@@ -72,6 +74,7 @@ where
     }
 
     #[cfg(feature = "parallel")]
+    #[instrument(skip_all, name = "SumcheckSingle::compute_sumcheck_polynomial")]
     pub(crate) fn compute_sumcheck_polynomial(&self) -> SumcheckPolynomial<F> {
         assert!(self.num_variables >= 1);
 
@@ -147,6 +150,7 @@ where
         }
     }
 
+    #[instrument(skip_all, name = "SumcheckSingle::add_new_equality")]
     pub fn add_new_equality(
         &mut self,
         points: &[MultilinearPoint<F>],
@@ -169,6 +173,7 @@ where
 
     // When the folding randomness arrives, compress the table accordingly (adding the new points)
     #[cfg(not(feature = "parallel"))]
+    #[instrument(skip_all, name = "SumcheckSingle::compress")]
     pub fn compress(
         &mut self,
         combination_randomness: F, // Scale the initial point
@@ -200,6 +205,7 @@ where
     }
 
     #[cfg(feature = "parallel")]
+    #[instrument(skip_all, name = "SumcheckSingle::compress")]
     pub fn compress(
         &mut self,
         combination_randomness: F, // Scale the initial point

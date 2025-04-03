@@ -9,6 +9,7 @@ use crate::{
     fs_utils::WhirPoWIOPattern,
     poly_utils::{MultilinearPoint, coeffs::CoefficientList},
 };
+use tracing::instrument;
 
 use super::prover_single::SumcheckSingle;
 
@@ -59,6 +60,10 @@ where
         }
     }
 
+    #[instrument(
+        skip_all,
+        name = "SumcheckProverNotSkipping::compute_sumcheck_polynomial"
+    )]
     pub fn compute_sumcheck_polynomials<S, Merlin>(
         &mut self,
         merlin: &mut Merlin,

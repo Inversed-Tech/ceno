@@ -6,6 +6,7 @@ use tracing::instrument;
 
 /// Given the evaluation of f on the coset specified by coset_offset * <coset_gen>
 /// Compute the fold on that point
+#[instrument(skip_all)]
 pub fn compute_fold<F: Field>(
     answers: &[F],
     folding_randomness: &[F],
@@ -51,7 +52,7 @@ fn debug_f<F: FftField + std::fmt::Debug>() -> String {
     )
 }
 
-#[instrument(skip_all, fields(folding_factor=folding_factor, dbg=debug_f::<F>()))]
+#[instrument(skip_all, fields(folding_factor=folding_factor, len=stacked_evaluations.len(), dbg=debug_f::<F>()))]
 pub fn restructure_evaluations<F: FftField>(
     mut stacked_evaluations: Vec<F>,
     fold_type: FoldType,

@@ -3,6 +3,7 @@ use crate::ntt::wavelet_transform;
 use ark_ff::Field;
 use ark_poly::{DenseUVPolynomial, Polynomial, univariate::DensePolynomial};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 #[cfg(feature = "parallel")]
 use {
     rayon::{join, prelude::*},
@@ -70,6 +71,7 @@ where
     }
 
     /// Evaluate the given polynomial at `point` from F^n.
+    //#[instrument(skip_all, name = "CoefficientList::evaluate")]
     pub fn evaluate(&self, point: &MultilinearPoint<F>) -> F {
         assert_eq!(self.num_variables, point.n_variables());
         eval_multivariate(&self.coeffs, &point.0)
@@ -136,6 +138,7 @@ where
     /// Evaluate self at `point`, where `point` is from a field extension extending the field over which the polynomial `self` is defined.
     ///
     /// Note that we only support the case where F is a prime field.
+    //#[instrument(skip_all, name = "CoefficientList::evaluate_at_extension")]
     pub fn evaluate_at_extension<E: Field<BasePrimeField = F>>(
         &self,
         point: &MultilinearPoint<E>,
@@ -150,6 +153,7 @@ where
     /// NOTE: For the `usual` mapping between univariate and multilinear polynomials, the coefficient ordering is such that
     /// for a single point x, we have (extending notation to a single point)
     /// self.evaluate_at_univariate(x) == self.evaluate([x^(2^n), x^(2^{n-1}), ..., x^2, x])
+    //#[instrument(skip_all, name = "CoefficientList::evaluate_at_univariate")]
     pub fn evaluate_at_univariate(&self, points: &[F]) -> Vec<F> {
         // DensePolynomial::from_coefficients_slice converts to a dense univariate polynomial.
         // The coefficient order is "coefficient of 1 first".
