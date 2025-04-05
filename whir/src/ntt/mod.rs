@@ -55,6 +55,9 @@ pub fn expand_from_coeff<F: FftField>(coeffs: &[F], expansion: usize) -> Vec<F> 
             val
         }));
     }
+    // chunk, 0: w^0
+    // chunk 1: c_0 * (w^1), c_1 * w^2, c_2 *  w^3
+    // chunk 2: c_0 * w^2, c_1 * (w^2)^2, c_3 * (w^2)^3
     let twiddle_span = debug_span!("create twiddles").entered();
     #[cfg(feature = "parallel")]
     result.par_extend((1..expansion).into_par_iter().flat_map(|i| {

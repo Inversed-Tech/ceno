@@ -5,9 +5,9 @@ use nimue::{
 };
 use nimue_pow::{PoWChallenge, PowStrategy};
 
-use crate::poly_utils::{MultilinearPoint, coeffs::CoefficientList};
-
 use super::prover_batched::SumcheckBatched;
+use crate::poly_utils::{MultilinearPoint, coeffs::CoefficientList};
+use tracing::instrument;
 
 pub struct SumcheckProverNotSkippingBatched<F> {
     sumcheck_prover: SumcheckBatched<F>,
@@ -39,6 +39,7 @@ where
         self.sumcheck_prover.get_folded_eqs()
     }
 
+    #[instrument(skip_all)]
     pub fn compute_sumcheck_polynomials<S, Merlin>(
         &mut self,
         merlin: &mut Merlin,

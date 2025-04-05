@@ -9,6 +9,7 @@ use crate::{
 };
 
 use super::proof::SumcheckPolynomial;
+use tracing::instrument;
 
 pub struct SumcheckCore<F> {
     // The evaluation of p
@@ -42,6 +43,7 @@ where
         prover
     }
 
+    #[instrument(skip_all, name = "SumCheckCore::compute_sumcheck_polynomial")]
     pub fn compute_sumcheck_polynomial(&self, folding_factor: usize) -> SumcheckPolynomial<F> {
         let two = F::ONE + F::ONE; // Enlightening
 
@@ -95,6 +97,7 @@ where
         SumcheckPolynomial::new(evaluations, folding_factor)
     }
 
+    #[instrument(skip_all, name = "SumCheckCore::add_new_equality")]
     pub fn add_new_equality(
         &mut self,
         points: &[MultilinearPoint<F>],
@@ -109,6 +112,7 @@ where
     }
 
     // When the folding randomness arrives, compress the table accordingly (adding the new points)
+    #[instrument(skip_all, name = "SumCheckCore::compres")]
     pub fn compress(
         &mut self,
         folding_factor: usize,

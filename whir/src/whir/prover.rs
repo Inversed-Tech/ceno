@@ -309,12 +309,14 @@ where
         }
 
         // STIR queries
+        let span = debug_span!("get_challenge_stir_queries").entered();
         let stir_challenges_indexes = get_challenge_stir_queries(
             round_state.domain.size(), // Current domain size *before* folding
             self.0.folding_factor.at_round(round_state.round), // Current fold factor
             round_params.num_queries,
             merlin,
         )?;
+        drop(span);
         // Compute the generator of the folded domain, in the extension field
         let domain_scaled_gen = round_state
             .domain
@@ -405,8 +407,10 @@ where
 
         // Randomness for combination
         let [combination_randomness_gen] = merlin.challenge_scalars()?;
+        let span = debug_span!("combination_randomness").entered();
         let combination_randomness =
             expand_randomness(combination_randomness_gen, stir_challenges.len());
+        drop(span);
 
         let mut sumcheck_prover = round_state
             .sumcheck_prover

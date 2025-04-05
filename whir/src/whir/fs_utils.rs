@@ -1,6 +1,7 @@
 use crate::utils::dedup;
 use ark_crypto_primitives::merkle_tree::Config;
 use nimue::{ByteChallenges, ProofResult};
+use tracing::instrument;
 
 pub fn get_challenge_stir_queries<T>(
     domain_size: usize,
