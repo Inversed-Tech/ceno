@@ -24,6 +24,8 @@ use transcript::{
     BasicTranscript as Transcript, BasicTranscriptWithStat as TranscriptWithStat, StatisticRecorder,
 };
 
+use tracing_profile::init_tracing;
+
 fn parse_size(s: &str) -> Result<u32, parse_size::Error> {
     parse_size::Config::new()
         .with_binary()
@@ -84,6 +86,7 @@ type B = Goldilocks;
 type Pcs = Basefold<GoldilocksExt2, BasefoldRSParams>;
 
 fn main() {
+    let _guard = init_tracing().expect("failed to initialize tracing");
     let args = {
         let mut args = Args::parse();
         args.stack_size = args.stack_size.next_multiple_of(WORD_SIZE as u32);
@@ -99,31 +102,31 @@ fn main() {
     // filter by profiling level;
     // spans with level i contain the field "profiling_{i}"
     // this restricts statistics to first (args.profiling) levels
-    let profiling_level = args.profiling.unwrap_or(1);
-    let filter_by_profiling_level = filter_fn(move |metadata| {
-        (1..=profiling_level)
-            .map(|i| format!("profiling_{i}"))
-            .any(|field| metadata.fields().field(&field).is_some())
-    });
-
-    let fmt_layer = fmt::layer()
-        .compact()
-        .with_thread_ids(false)
-        .with_thread_names(false)
-        .without_time();
-
-    Registry::default()
-        .with(args.profiling.is_some().then_some(ForestLayer::default()))
-        .with(fmt_layer)
-        // if some profiling granularity is specified, use the profiling filter,
-        // otherwise use the default
-        .with(
-            args.profiling
-                .is_some()
-                .then_some(filter_by_profiling_level),
-        )
-        .with(args.profiling.is_none().then_some(default_filter))
-        .init();
+    // let profiling_level = args.profiling.unwrap_or(1);
+    // let filter_by_profiling_level = filter_fn(move |metadata| {
+    // (1..=profiling_level)
+    // .map(|i| format!("profiling_{i}"))
+    // .any(|field| metadata.fields().field(&field).is_some())
+    // });
+    //
+    // let fmt_layer = fmt::layer()
+    // .compact()
+    // .with_thread_ids(false)
+    // .with_thread_names(false)
+    // .without_time();
+    //
+    // Registry::default()
+    // .with(args.profiling.is_some().then_some(ForestLayer::default()))
+    // .with(fmt_layer)
+    // if some profiling granularity is specified, use the profiling filter,
+    // otherwise use the default
+    // .with(
+    // args.profiling
+    // .is_some()
+    // .then_some(filter_by_profiling_level),
+    // )
+    // .with(args.profiling.is_none().then_some(default_filter))
+    // .init();
 
     // process public input first
     let public_io = args

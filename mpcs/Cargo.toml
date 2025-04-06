@@ -36,6 +36,7 @@ transcript = { path = "../transcript" }
 whir = { path = "../whir", features = ["ceno"] }
 witness = { path = "../witness" }
 zeroize = "1.8"
+tracing-profile = "0.10.3"
 
 [dev-dependencies]
 criterion.workspace = true

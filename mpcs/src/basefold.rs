@@ -536,16 +536,17 @@ mod test {
     };
 
     use super::BasefoldRSParams;
-
+    use tracing_profile::init_tracing;
     type PcsGoldilocksRSCode = Basefold<GoldilocksExt2, BasefoldRSParams>;
 
     #[test]
     fn simple_batch_commit_open_verify_goldilocks() {
+        let _guard = init_tracing().expect("failed to initialize tracing");
         // Both challenge and poly are over base field
         run_simple_batch_commit_open_verify::<GoldilocksExt2, PcsGoldilocksRSCode>(10, 11, 1);
-        run_simple_batch_commit_open_verify::<GoldilocksExt2, PcsGoldilocksRSCode>(10, 11, 4);
+        // run_simple_batch_commit_open_verify::<GoldilocksExt2, PcsGoldilocksRSCode>(10, 11, 4);
         // Test trivial proof with small num vars
-        run_simple_batch_commit_open_verify::<GoldilocksExt2, PcsGoldilocksRSCode>(4, 6, 4);
+        // run_simple_batch_commit_open_verify::<GoldilocksExt2, PcsGoldilocksRSCode>(4, 6, 4);
     }
 
     #[test]

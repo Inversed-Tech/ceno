@@ -50,6 +50,8 @@ tempfile = "3.14"
 thread_local = "1.1"
 tiny-keccak.workspace = true
 
+tracing-profile = "0.10.3"
+
 [dev-dependencies]
 cfg-if.workspace = true
 criterion.workspace = true

@@ -55,7 +55,7 @@ impl<E: ExtensionField, PCS: PolynomialCommitmentScheme<E>> ZKVMProver<E, PCS> {
         skip_all,
         name = "ZKVM_create_proof",
         fields(profiling_1),
-        level = "trace"
+        level = "debug"
     )]
     pub fn create_proof(
         &self,

@@ -26,6 +26,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet},
     sync::Arc,
 };
+use tracing::instrument;
 use transcript::BasicTranscript as Transcript;
 
 pub struct FullMemState<Record> {
@@ -374,6 +375,7 @@ pub type IntermediateState<E, PCS> = (ZKVMProof<E, PCS>, ZKVMVerifyingKey<E, PCS
 // state external to this pipeline (e.g, sanity check in bin/e2e.rs)
 
 #[allow(clippy::type_complexity)]
+#[instrument(skip_all)]
 pub fn run_e2e_with_checkpoint<
     E: ExtensionField + LkMultiplicityKey + serde::de::DeserializeOwned,
     PCS: PolynomialCommitmentScheme<E> + 'static,
@@ -495,6 +497,7 @@ pub fn run_e2e_with_checkpoint<
 
 // Runs program emulation + witness generation + proving
 #[allow(clippy::too_many_arguments)]
+#[instrument(skip_all)]
 pub fn run_e2e_proof<E: ExtensionField + LkMultiplicityKey, PCS: PolynomialCommitmentScheme<E>>(
     program: Arc<Program>,
     max_steps: usize,
