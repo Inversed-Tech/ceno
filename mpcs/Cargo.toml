@@ -37,6 +37,7 @@ whir = { path = "../whir", features = ["ceno"] }
 witness = { path = "../witness" }
 zeroize = "1.8"
 tracing-profile = "0.10.3"
+clap = { version = "4.4.17", features = ["derive"] }
 
 [dev-dependencies]
 criterion.workspace = true

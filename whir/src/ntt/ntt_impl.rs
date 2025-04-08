@@ -172,12 +172,25 @@ impl<F: Field> NttEngine<F> {
         self.ntt_batch(values, size);
     }
 
+    fn get_debug(&self, root: F, order: usize) -> String {
+        format!(
+            "self_order={:?}, omega_order={:?}, new_order={order}, root={:?}",
+            self.order, self.omega_order, root
+        )
+    }
+
     pub fn root(&self, order: usize) -> F {
         assert!(
             self.order % order == 0,
             "Subgroup of requested order does not exist."
         );
-        self.omega_order.pow([(self.order / order) as u64])
+        let r = self.omega_order.pow([(self.order / order) as u64]);
+        tracing::event!(
+            tracing::Level::DEBUG,
+            "NttEngine: {}",
+            self.get_debug(r, order)
+        );
+        r
     }
 
     /// Returns a cached table of roots of unity of the given order.
