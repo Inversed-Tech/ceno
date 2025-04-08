@@ -37,9 +37,6 @@ fn main() {
     let polys = rmm.to_mles();
     let comm = Pcs::batch_commit_and_write(&pp, rmm, &mut transcript).unwrap();
 
-    let rmm = RowMajorMatrix::rand(&mut OsRng, 1 << num_vars, batch_size);
-    Pcs::batch_commit(&pp, rmm).unwrap();
-
     let point = get_point_from_challenge(num_vars, &mut transcript);
     let evals = polys.iter().map(|poly| poly.evaluate(&point)).collect_vec();
 
