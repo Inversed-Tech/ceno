@@ -314,6 +314,9 @@ pub const RANGE_LOOKUPS_PER_ROUND: usize = 290;
 pub const LOOKUPS_PER_ROUND: usize =
     AND_LOOKUPS_PER_ROUND + XOR_LOOKUPS_PER_ROUND + RANGE_LOOKUPS_PER_ROUND;
 
+pub const LOOKUP_ARGS_PER_ROUND: usize =
+    3 * AND_LOOKUPS_PER_ROUND + 3 * XOR_LOOKUPS_PER_ROUND + RANGE_LOOKUPS_PER_ROUND;
+
 macro_rules! allocate_and_split {
         ($chip:expr, $total:expr, $( $size:expr ),* ) => {{
             let (witnesses, _) = $chip.allocate_wits_in_layer::<$total, 0>();
@@ -342,14 +345,14 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
 
     fn build_gkr_phase(&mut self, chip: &mut Chip) {
         let final_outputs =
-            chip.allocate_output_evals::<{ KECCAK_OUTPUT_SIZE + KECCAK_INPUT_SIZE + LOOKUPS_PER_ROUND * ROUNDS }>();
+            chip.allocate_output_evals::<{ KECCAK_OUTPUT_SIZE + KECCAK_INPUT_SIZE + LOOKUP_ARGS_PER_ROUND * ROUNDS }>();
 
         let mut final_outputs_iter = final_outputs.iter();
 
         let [keccak_output32, keccak_input32, lookup_outputs] = [
             KECCAK_OUTPUT_SIZE,
             KECCAK_INPUT_SIZE,
-            LOOKUPS_PER_ROUND * ROUNDS,
+            LOOKUP_ARGS_PER_ROUND * ROUNDS,
         ]
         .map(|many| final_outputs_iter.by_ref().take(many).collect_vec());
 
@@ -646,13 +649,16 @@ impl<E: ExtensionField> ProtocolBuilder for KeccakLayout<E> {
                     .count();
 
                 // TODO: use real challenge
-                let alpha = Constant::Base(1 << 8);
-                let beta = Constant::Base(0);
+                // let alpha = Constant::Base(1 << 8);
+                // let beta = Constant::Base(0);
 
                 // Send all lookups to the final output layer
-                for (i, lookup) in chain!(and_lookups, xor_lookups, range_lookups).enumerate() {
-                    expressions.push(lookup.compress(alpha.clone(), beta.clone()));
-                    expr_names.push(format!("{i}th: {:?}", lookup));
+                for (i, lookup_arg) in chain!(and_lookups, xor_lookups, range_lookups)
+                    .flatten()
+                    .enumerate()
+                {
+                    expressions.push(lookup_arg);
+                    expr_names.push(format!("{i}th lookup arg"));
                     evals.push(lookup_outputs[lookup_index].clone());
                     lookup_index += 1;
                 }
@@ -773,12 +779,12 @@ where
 
             let mut add_and = |a: u64, b: u64, round: usize| {
                 let c = a & b;
-                and_lookups[round].push((c << 16) + (b << 8) + a);
+                and_lookups[round].extend(vec![a, b, c]);
             };
 
             let mut add_xor = |a: u64, b: u64, round: usize| {
                 let c = a ^ b;
-                xor_lookups[round].push((c << 16) + (b << 8) + a);
+                xor_lookups[round].extend(vec![a, b, c]);
             };
 
             let mut add_range = |value: u64, size: usize, round: usize| {
@@ -1075,6 +1081,7 @@ pub fn run_faster_keccakf(states: Vec<[u64; 25]>, verify: bool, test: bool) -> (
     let gkr_witness: GKRCircuitWitness<E> = layout.gkr_witness(&phase1_witness, &vec![]);
 
     let out_evals = {
+        // Assumes two instances
         let point1 = Arc::new(vec![E::ZERO]);
         let point2 = Arc::new(vec![E::ONE]);
         let final_output1 = gkr_witness
@@ -1082,7 +1089,6 @@ pub fn run_faster_keccakf(states: Vec<[u64; 25]>, verify: bool, test: bool) -> (
             .last()
             .unwrap()
             .bases
-            //.clone()
             .iter()
             .map(|base| base[0].clone())
             .collect_vec();
@@ -1091,7 +1097,6 @@ pub fn run_faster_keccakf(states: Vec<[u64; 25]>, verify: bool, test: bool) -> (
             .last()
             .unwrap()
             .bases
-            //.clone()
             .iter()
             .map(|base| base[1].clone())
             .collect_vec();
@@ -1112,6 +1117,12 @@ pub fn run_faster_keccakf(states: Vec<[u64; 25]>, verify: bool, test: bool) -> (
         // }
 
         let len = final_output1.len();
+        assert_eq!(len, final_output2.len());
+        assert_eq!(
+            len,
+            KECCAK_INPUT_SIZE + KECCAK_OUTPUT_SIZE + LOOKUP_ARGS_PER_ROUND * ROUNDS
+        );
+
         let gkr_outputs = chain!(
             zip(final_output1, once(point1).cycle().take(len)),
             zip(final_output2, once(point2).cycle().take(len))
